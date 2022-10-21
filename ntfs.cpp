@@ -185,6 +185,20 @@ std::string GetIndexAttributesLayout(std::ifstream* rawcontent, ntfsinfo* curnt,
     return "";
 
 }
+
+std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset)
+{
+    std::string silayout = "";
+
+    return silayout;
+}
+
+std::string GetFileNameAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset)
+{
+    std::string fnlayout = "";
+    
+    return fnlayout;
+}
 // will need to fix this so it accounts for resident and non-resident...
 // right now it is non-resident only since the mft is always non-resident..
 std::string GetDataAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftoffset)
@@ -556,7 +570,7 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
     mftentryoffset = mftoffset + relativentinode * curnt->mftentrysize * curnt->sectorspercluster * curnt->bytespersector;
     //std::cout << "MFT Entry Offset: " << mftentryoffset << std::endl;
     std::string indexlayout = GetIndexAttributesLayout(rawcontent, curnt, mftentryoffset);
-    std::cout << "Index Layout: " << indexlayout << std::endl;
+    //std::cout << "Index Layout: " << indexlayout << std::endl;
     // PARSE INDEX ROOT AND ALLOCATION TO DETERMINE THE DIR/FILE NAME/INODE AND SEE IF THEY MATCH
     std::vector<std::string> indexlayoutlist;
     indexlayoutlist.clear();
@@ -577,21 +591,21 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
             ReadContent(rawcontent, irs, indexoffset + 8, 4);
             ReturnUint32(&indexrecordsize, irs);
             delete[] irs;
-            std::cout << "Index Record Size: " << indexrecordsize << std::endl;
+            //std::cout << "Index Record Size: " << indexrecordsize << std::endl;
             // STARTING OFFSET
             uint8_t* so = new uint8_t[4];
             uint32_t startoffset = 0;
             ReadContent(rawcontent, so, indexoffset + 16, 4);
             ReturnUint32(&startoffset, so);
             delete[] so;
-            std::cout << "start offset: " << startoffset << std::endl;
+            //std::cout << "start offset: " << startoffset << std::endl;
             // END OFFSET
             uint8_t* eo = new uint8_t[4];
             uint32_t endoffset = 0;
             ReadContent(rawcontent, eo, indexoffset + 20, 4);
             ReturnUint32(&endoffset, eo);
             delete[] eo;
-            std::cout << "End Offset: " << endoffset << std::endl;
+            //std::cout << "End Offset: " << endoffset << std::endl;
             /*
             // ALLOCATION OFFSET - DELETED ENTRIES
             uint8_t* ao = new uint8_t[4];
@@ -609,20 +623,20 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
                 ReadContent(rawcontent, iel, indexoffset + 16 + curpos + 8, 2);
                 ReturnUint16(&indexentrylength, iel);
                 delete[] iel;
-                std::cout << "Index Entry Length: " << indexentrylength << std::endl;
+                //std::cout << "Index Entry Length: " << indexentrylength << std::endl;
                 // FILE NAME ATTRIBUTE LENGTH
                 uint8_t* fnl = new uint8_t[2];
                 uint16_t filenamelength = 0;
                 ReadContent(rawcontent, fnl, indexoffset + 16 + curpos + 10, 2);
                 ReturnUint16(&filenamelength, fnl);
                 delete[] fnl;
-                std::cout << "File Name Attribute Length: " << filenamelength << std::endl;
+                //std::cout << "File Name Attribute Length: " << filenamelength << std::endl;
                 uint8_t* ief = new uint8_t[4];
                 uint32_t indexentryflags = 0;
                 ReadContent(rawcontent, ief, indexoffset + 16 + curpos + 12, 4);
                 ReturnUint32(&indexentryflags, ief);
                 delete[] ief;
-                std::cout << "Index Entry Flags: 0x" << std::hex << indexentryflags << std::dec << std::endl;
+                //std::cout << "Index Entry Flags: 0x" << std::hex << indexentryflags << std::dec << std::endl;
                 if(indexentryflags & 0x02)
                     break;
                 else
@@ -635,7 +649,7 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
                         ReadContent(rawcontent, i3si, indexoffset + 16 + curpos + 6, 2);
                         ReturnUint16(&i30seqid, i3si);
                         delete[] i3si;
-                        std::cout << "I30 Sequence ID: " << i30seqid << std::endl;
+                        //std::cout << "I30 Sequence ID: " << i30seqid << std::endl;
                         // CHILD NT INODE
                         uint8_t* cni = new uint8_t[6];
                         uint64_t childntinode = 0;
@@ -643,7 +657,7 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
                         ReturnUint(&childntinode, cni, 6);
                         delete[] cni;
                         childntinode = childntinode & 0x00ffffffffffffff;
-                        std::cout << "Child NT Inode: " << childntinode << std::endl;
+                        //std::cout << "Child NT Inode: " << childntinode << std::endl;
                         if(childntinode <= curnt->maxmftentrycount)
                         {
                             curpos = curpos + 16; // STARTING ON FILE_NAME ATTRIBUTE
@@ -653,7 +667,7 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
                             ReadContent(rawcontent, fnt, indexoffset + 16 + curpos + 65, 1);
                             fntype = (uint8_t)fnt[0];
                             delete[] fnt;
-                            std::cout << "file name type: " << (int)fntype << std::endl;
+                            //std::cout << "file name type: " << (int)fntype << std::endl;
                             if(fntype != 0x02)
                             {
                                 // FILE NAME LENGTH
@@ -662,19 +676,19 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
                                 ReadContent(rawcontent, nl, indexoffset + 16 + curpos + 64, 1);
                                 namelength = (uint8_t)nl[0];
                                 delete[] nl;
-                                std::cout << "name length: " << (int)namelength << std::endl;
+                                //std::cout << "name length: " << (int)namelength << std::endl;
                                 // FILE NAME
                                 std::string filename = "";
-                                for(uint8_t i=0; i < namelength; i++)
+                                for(uint8_t j=0; j < namelength; j++)
                                 {
                                     uint8_t* sl = new uint8_t[2];
                                     uint16_t singleletter = 0;
-                                    ReadContent(rawcontent, sl, indexoffset + 16 + curpos + 66 + i*2, 2);
+                                    ReadContent(rawcontent, sl, indexoffset + 16 + curpos + 66 + j*2, 2);
                                     ReturnUint16(&singleletter, sl);
                                     delete[] sl;
                                     filename += (char)singleletter;
                                 }
-                                std::cout << "File Name to compare to child name: " << filename << " " << childpath << std::endl;
+                                //std::cout << "File Name to compare to child name: " << filename << " " << childpath << std::endl;
                                 if(filename.compare(childpath) == 0)
                                     return childntinode;
                             }
@@ -687,7 +701,7 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
         else // $INDEX_ALLOCATION
         {
             uint32_t indexrecordcount = indexlength / indexrecordsize;
-            std::cout << "Index Record Count: " << indexrecordcount << std::endl;
+            //std::cout << "Index Record Count: " << indexrecordcount << std::endl;
             uint64_t curpos = indexoffset;
             for(uint32_t j=0; j < indexrecordcount; j++)
             {
@@ -697,95 +711,134 @@ uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntin
                 ReadContent(rawcontent, so, curpos + 24, 4);
                 ReturnUint32(&startoffset, so);
                 delete[] so;
-                std::cout << "Start Offset: " << startoffset << std::endl;
+                //std::cout << "Start Offset: " << startoffset << std::endl;
                 // END OFFSET
                 uint8_t* eo = new uint8_t[4];
                 uint32_t endoffset = 0;
                 ReadContent(rawcontent, eo, curpos + 28, 4);
                 ReturnUint32(&endoffset, eo);
                 delete[] eo;
-                std::cout << "End Offset: " << endoffset << std::endl;
+                //std::cout << "End Offset: " << endoffset << std::endl;
                 curpos = curpos + 24 + startoffset + j*indexrecordsize;
+		//std::cout << "before while loop - curpos: " << curpos << " indexsize: " << indexoffset + j*indexrecordsize + indexrecordsize << std::endl;
                 while(curpos < indexoffset + j*indexrecordsize + indexrecordsize)
                 {
+		    // INDEX ENTRY LENGTH
+		    uint8_t* iel = new uint8_t[2];
+		    uint16_t indexentrylength = 0;
+		    ReadContent(rawcontent, iel, curpos + 8, 2);
+		    ReturnUint16(&indexentrylength, iel);
+		    delete[] iel;
+		    //std::cout << "Index Entry Length: " << indexentrylength << std::endl;
+		    // FILE NAME ATTRIBUTE LENGTH
+		    uint8_t* fnl = new uint8_t[2];
+		    uint16_t filenamelength = 0;
+		    ReadContent(rawcontent, fnl, curpos + 10, 2);
+		    ReturnUint16(&filenamelength, fnl);
+		    delete[] fnl;
+		    //std::cout << "File Name Attribute Length: " << filenamelength << std::endl;
+		    uint8_t* ief = new uint8_t[4];
+		    if(indexentrylength > 0 && filenamelength > 66 && filenamelength < indexentrylength)
+		    {
+			// I30 SEQUENCE ID
+			uint8_t* i3si = new uint8_t[2];
+			uint16_t i30seqid = 0;
+			ReadContent(rawcontent, i3si, curpos + 6, 2);
+			ReturnUint16(&i30seqid, i3si);
+			delete[] i3si;
+			//std::cout << "I30 Sequence ID: " << i30seqid << std::endl;
+			// CHILD NT INODE
+			uint8_t* cni = new uint8_t[6];
+			uint64_t childntinode = 0;
+			ReadContent(rawcontent, cni, curpos, 6);
+			ReturnUint(&childntinode, cni, 6);
+			delete[] cni;
+			childntinode = childntinode & 0x00ffffffffffffff;
+			//std::cout << "Child NT Inode: " << childntinode << std::endl;
+			if(childntinode <= curnt->maxmftentrycount)
+			{
+                            curpos = curpos + 16; // STARTING ON FILE_NAME ATTRIBUTE
+                            // FILE NAME TYPE
+                            uint8_t* fnt = new uint8_t[1];
+                            uint8_t fntype = 0;
+                            ReadContent(rawcontent, fnt, curpos + 65, 1);
+                            fntype = (uint8_t)fnt[0];
+                            delete[] fnt;
+                            //std::cout << "file name type: " << (int)fntype << std::endl;
+                            if(fntype != 0x02)
+                            {
+                                // FILE NAME LENGTH
+                                uint8_t* nl = new uint8_t[1];
+                                uint8_t namelength = 0;
+                                ReadContent(rawcontent, nl, curpos + 64, 1);
+                                namelength = (uint8_t)nl[0];
+                                delete[] nl;
+                                //std::cout << "name length: " << (int)namelength << std::endl;
+                                // FILE NAME
+                                std::string filename = "";
+                                for(uint8_t k=0; k < namelength; k++)
+                                {
+                                    uint8_t* sl = new uint8_t[2];
+                                    uint16_t singleletter = 0;
+                                    ReadContent(rawcontent, sl, curpos + 66 + k*2, 2);
+                                    ReturnUint16(&singleletter, sl);
+                                    delete[] sl;
+                                    filename += (char)singleletter;
+                                }
+                                //std::cout << "File Name to compare to child name: " << filename << " " << childpath << std::endl;
+                                if(filename.compare(childpath) == 0)
+                                    return childntinode;
+                            }
+			}
+		    }
+		    curpos += indexentrylength - 16;
                 }
             }
         }
     }
 
     return childntinode;
-    /*
-    quint64 indxrootoffset = 0;
-    uint32_t indxrootlength = 0;
-    QList<quint64> indxallocoffset;
-    QList<quint64> indxalloclength;
-    if(indxallocoffset.count() > 0) // INDX ALLOC EXISTS, SO LETS PARSE IT
+}
+
+std::string ParseNtfsFile(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntinode, std::string childfile)
+{
+    std::string fileforensics = "";
+    std::cout << "parent ntinode: " << ntinode << " child file to analyze: " << childfile << std::endl;
+    // NEED TO GET MFT ENTRY CONTENTS FOR CHILD FILE
+
+    uint64_t mftentryoffset = 0;
+    uint64_t mftoffset = curnt->mftstartingcluster * curnt->sectorspercluster * curnt->bytespersector;
+    uint64_t mftlength = 0;
+    std::string mftlayout = GetDataAttributeLayout(rawcontent, curnt, mftoffset);
+    std::vector<std::string> mftlayoutlist;
+    mftlayoutlist.clear();
+    std::istringstream mll(mftlayout);
+    std::string mls;
+    uint64_t relativentinode = ntinode;
+    uint64_t mftsize = 0;
+    while(getline(mll, mls, ';'))
+        mftlayoutlist.push_back(mls);
+    for(int i=0; i < mftlayoutlist.size(); i++)
     {
-        for(int i=0; i < indxallocoffset.count(); i++)
-        {
-            uint32_t indxrecordcount = (indxalloclength.at(i) * bytespercluster) / indxrecordsize;
-            for(uint32_t j=0; j < indxrecordcount; j++)
-            {
-                uint32_t endoffset = qFromLittleEndian<uint32_t>(curimg->ReadContent(curpos + 28, 4));
-                uint32_t allocoffset = qFromLittleEndian<uint32_t>(curimg->ReadContent(curpos + 32, 4));
-                curpos = curpos + 24 + startoffset + j*indxrecordsize;
-                //qDebug() << "curpos:" << curpos << "indexallocsize:" << (indxallocoffset.at(i) + indxalloclength.at(i)) * bytespercluster;
-                while(curpos < (indxallocoffset.at(i) + indxalloclength.at(i)) * bytespercluster)
-                {
-                    uint64_t ntinode = qFromLittleEndian<uint64_t>(curimg->ReadContent(curpos, 6)); // nt inode for index entry
-                    ntinode = ntinode & 0x00ffffffffffffff;
-                    uint16_t i30seqid = qFromLittleEndian<uint16_t>(curimg->ReadContent(curpos + 6, 2)); // seq number of index entry
-                    uint16_t entrylength = qFromLittleEndian<uint16_t>(curimg->ReadContent(curpos + 8, 2)); // entry length
-                    uint16_t fnattrlength = qFromLittleEndian<uint16_t>(curimg->ReadContent(curpos + 10, 2)); // $FILE_NAME attr length
-                    //if((ntinode == 0 && parentntinode == 5) || (ntinode > 0 && ntinode <= maxmftentries && entrylength > 0 && entrylength < indxrecordsize && fnattrlength < entrylength && fnattrlength > 66 && entrylength % 4 == 0))
-                    if((ntinode <= maxmftentries && entrylength > 0 && entrylength < indxrecordsize && fnattrlength < entrylength && fnattrlength > 66 && entrylength % 4 == 0))
-                    {
-                        uint8_t fntype = qFromLittleEndian<uint8_t>(curimg->ReadContent(curpos + 16 + 65, 1));
-                        if(fntype != 0x02)
-                        {
-                            uint8_t filenamelength = qFromLittleEndian<uint8_t>(curimg->ReadContent(curpos + 16 + 64, 1));
-                            QString filename = "";
-                            //qDebug() << "filenamelength:" << filenamelength;
-                            for(uint8_t k=0; k < filenamelength; k++)
-                                filename += QString(QChar(qFromLittleEndian<uint16_t>(curimg->ReadContent(curpos + 16 + 66 + k*2, 2))));
-                            if(filename != "." && filename != ".." && !filename.isEmpty())
-                            {
-                                //qDebug() << "curpos:" << curpos + 16;
-                                uint64_t parntinode = qFromLittleEndian<uint64_t>(curimg->ReadContent(curpos + 16, 6)); // parent nt inode for entry
-                                parntinode = parntinode & 0x00ffffffffffffff;
-                                uint16_t i30parentsequenceid = qFromLittleEndian<uint16_t>(curimg->ReadContent(curpos + 16 + 6, 2)); // parent seq number for entry
-                                uint64_t i30create = qFromLittleEndian<uint64_t>(curimg->ReadContent(curpos + 16 + 8, 8));
-                                uint64_t i30modify = qFromLittleEndian<uint64_t>(curimg->ReadContent(curpos + 16 + 16, 8));
-                                uint64_t i30change = qFromLittleEndian<uint64_t>(curimg->ReadContent(curpos + 16 + 24, 8));
-                                uint64_t i30access = qFromLittleEndian<uint64_t>(curimg->ReadContent(curpos + 16 + 32, 8));
-				// may not need this if, have to test...
-				//if(ntinode <= maxmftentries && parntinode <= maxmftentries && !ntinodehash->contains(ntinode))
-				//{
-				//if(parentntinode == 7797)
-				    //qDebug() << "ntinode:" << ntinode << inodecnt << "Filename:" << filename << "parntinode:" << QString::number(parntinode) << "maxmftentries:" << maxmftentries;
-				if(parntinode <= maxmftentries)
-				{
-				    if(ntinodehash->contains(ntinode) && ntinodehash->value(ntinode) == i30seqid)
-				    {
-					//if(parentntinode == 7797)
-					    //qDebug() << "indxalloc: do nothing because ntinode already parsed and sequence is equal.";
-				    }
-				    else
-					inodecnt = GetMftEntryContent(curimg, curstartsector, ptreecnt, ntinode, parentntinode, parntinode, mftlayout, mftentrybytes, bytespercluster, inodecnt, filename, parinode, parfilename, i30seqid, i30parentsequenceid, i30create, i30modify, i30change, i30access, curpos, indxallocoffset.at(i) * bytespercluster + 24 + startoffset + j*indxrecordsize + endoffset, dirntinodehash, ntinodehash);
-				//}
-				}
-                            }
-                        }
-                        curpos = curpos + entrylength;
-                    }
-                    else
-                        curpos = curpos + 4;
-		    //qDebug() << "curpos:" << curpos;
-                }
-            }
-        }
+        std::size_t layoutsplit = mftlayoutlist.at(i).find(",");
+        mftoffset = std::stoull(mftlayoutlist.at(i).substr(0, layoutsplit));
+        mftlength = std::stoull(mftlayoutlist.at(i).substr(layoutsplit+1));
+        uint64_t curmaxntinode = mftlength / (curnt->mftentrysize * curnt->sectorspercluster * curnt->bytespersector);
+        if(relativentinode < curmaxntinode)
+            break;
+        else
+            relativentinode = relativentinode - curmaxntinode;
     }
-     */ 
+    mftentryoffset = mftoffset + relativentinode * curnt->mftentrysize * curnt->sectorspercluster * curnt->bytespersector;
+    std::cout << "MFT Entry Offset: " << mftentryoffset << std::endl;
+    std::string datalayout = GetDataAttributeLayout(rawcontent, curnt, mftentryoffset);
+    std::string standardinformationlayout = GetStandardInformationAttributeLayout(rawcontent, curnt, mftentryoffset);
+    std::string filenamelayout = GetFileNameAttributeLayout(rawcontent, curnt, mftentryoffset);
+    std::cout << "Data layout: " << datalayout << std::endl;
+    std::cout << "Standard Information layout: " << standardinformationlayout << std::endl;
+    std::cout << "File Name layout: " << filenamelayout << std::endl;
+
+    return fileforensics;
 }
 
 void ParseNtfsForensics(std::string filename, std::string mntptstr, std::string devicestr, uint8_t ftype)
@@ -794,6 +847,7 @@ void ParseNtfsForensics(std::string filename, std::string mntptstr, std::string 
     std::cout << filename << " || " << mntptstr << " || " << devicestr << " || " << (int)ftype << std::endl;
 
     ntfsinfo curnt;
+    uint64_t childntinode = 0;
     // GET NTFS FILESYSTEM INFO
     ParseNtfsInfo(&devicebuffer, &curnt);
     std::string pathstring = "";
@@ -814,8 +868,8 @@ void ParseNtfsForensics(std::string filename, std::string mntptstr, std::string 
 
     if(pathvector.size() > 1)
     {
-        uint64_t childntinode = 0;
         childntinode = ParseNtfsPath(&devicebuffer, &curnt, 5, pathvector.at(1)); // parse root directory for child directory
+	std::cout << "Child NT Inode to use for child path/file: " << childntinode << std::endl;
         //std::string nextdirlayout = "";
 	//nextdirlayout = ParseFatPath(&devicebuffer, &curfat, pathvector.at(1));
         //curfat.curdirlayout = nextdirlayout;
@@ -824,15 +878,18 @@ void ParseNtfsForensics(std::string filename, std::string mntptstr, std::string 
         //std::cout << "path vector size: " << pathvector.size() << std::endl;
 	for(int i=1; i < pathvector.size() - 2; i++)
         {
+	    childntinode = ParseNtfsPath(&devicebuffer, &curnt, childntinode, pathvector.at(i+1));
+	    std::cout << "Child NT Inode to use for child path/file: " << childntinode << std::endl;
             //std::cout << "get next directory..";
 	    //nextdirlayout = ParseFatPath(&devicebuffer, &curfat, pathvector.at(i+1));
 	    //curfat.curdirlayout = nextdirlayout;
 	    //std::cout << "child path: " << pathvector.at(i+1) << "'s layout: " << nextdirlayout << std::endl;
 	}
     }
-    //std::cout << "now to parse ntfs file: " << pathvector.at(pathvector.size() - 1) << std::endl;
+    std::cout << "now to parse ntfs file: " << pathvector.at(pathvector.size() - 1) << std::endl;
+    std::string forensicsinfo = ParseNtfsFile(&devicebuffer, &curnt, childntinode, pathvector.at(pathvector.size() - 1));
     //std::string forensicsinfo = ParseFatFile(&devicebuffer, &curfat, pathvector.at(pathvector.size() - 1));
-    //std::cout << forensicsinfo << std::endl;
+    std::cout << forensicsinfo << std::endl;
 
     /*
      *

@@ -22,8 +22,11 @@ std::string ParseFatFile(std::ifstream* rawcontent, fatinfo* curfat, std::string
 
 std::string GetDataAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftoffset);
 std::string GetIndexAttributesLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
+std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
+std::string GetFileNameAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
 
 uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntinode, std::string childpath);
+std::string ParseNtfsFile(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntinode, std::string childfile);
 
 void GetRunListLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t curoffset, uint32_t attributelength, std::string* runliststr);
 
