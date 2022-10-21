@@ -98,6 +98,18 @@ void GetRunListLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t curof
     runlenlist.clear();
 }
 
+std::string ConvertNtfsTimeToHuman(uint64_t ntfstime)
+{
+    uint64_t tmp = ntfstime / 10000000; // convert from 100ns intervals to seconds
+    tmp = tmp - 11644473600LL; // subtract number of seconds between epochs
+    time_t timet = (time_t)((uint32_t)tmp);
+    struct tm* tmtime = gmtime(&timet);
+    char hchar[100];
+    strftime(hchar, 100, "%m/%d/%Y %I:%M:%S %p UTC", tmtime);
+    
+    return std::string(hchar);
+}
+
 std::string GetIndexAttributesLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset)
 {
     std::string indexlayout = "";
@@ -188,23 +200,19 @@ std::string GetIndexAttributesLayout(std::ifstream* rawcontent, ntfsinfo* curnt,
 
 std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset)
 {
-    std::string silayout = "";
-
-    return silayout;
-    /*
-    uint8_t* me0s = new uint8_t[5];
-    ReadContent(rawcontent, me0s, mftoffset, 4);
-    me0s[4] = '\0';
-    std::string me0str((char*)me0s);
-    delete[] me0s;
-    //std::cout << "MFT Entry 0 Signature: " << me0str << std::endl;
-    if(me0str.compare("FILE") == 0) // A PROPER MFT ENTRY
+    std::string siforensics = "";
+    uint8_t* mes = new uint8_t[5];
+    ReadContent(rawcontent, mes, mftentryoffset, 4);
+    mes[4] = '\0';
+    std::string mesigstr((char*)mes);
+    delete[] mes;
+    //std::cout << "MFT Entry Signature: " << mesigstr << std::endl;
+    if(mesigstr.compare("FILE") == 0) // A PROPER MFT ENTRY
     {
-        std::string runliststr = "";
         // OFFSET TO THE FIRST ATTRIBUTE
         uint8_t* fao = new uint8_t[2];
         uint16_t firstattributeoffset = 0;
-        ReadContent(rawcontent, fao, mftoffset + 20, 2);
+        ReadContent(rawcontent, fao, mftentryoffset + 20, 2);
         ReturnUint16(&firstattributeoffset, fao);
         delete[] fao;
         //std::cout << "First Attribute Offset: " << firstattributeoffset << std::endl;
@@ -212,61 +220,62 @@ std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntf
         uint16_t curoffset = firstattributeoffset;
         while(curoffset < curnt->mftentrysize * curnt->sectorspercluster * curnt->bytespersector)
         {
-            //std::cout << "Current Offset: " << curoffset << std::endl;
+            std::cout << "Current Offset: " << curoffset << std::endl;
             // IS RESIDENT/NON-RESIDENT
             uint8_t* rf = new uint8_t[1];
             uint8_t isnonresident = 0; // 0 - Resident | 1 - Non-Resident
-            ReadContent(rawcontent, rf, mftoffset + curoffset + 8, 1);
+            ReadContent(rawcontent, rf, mftentryoffset + curoffset + 8, 1);
             isnonresident = (uint8_t)rf[0];
             delete[] rf;
-            //std::cout << "Is None Resident: " << (int)isnonresident << std::endl;
+            std::cout << "Is None Resident: " << (int)isnonresident << std::endl;
             // ATTRIBUTE LENGTH
             uint8_t* al = new uint8_t[4];
             uint32_t attributelength = 0;
-            ReadContent(rawcontent, al, mftoffset + curoffset + 4, 4);
+            ReadContent(rawcontent, al, mftentryoffset + curoffset + 4, 4);
             ReturnUint32(&attributelength, al);
             delete[] al;
-            //std::cout << "Attribute Length: " << attributelength << std::endl;
+            std::cout << "Attribute Length: " << attributelength << std::endl;
             // ATTRIBUTE TYPE
             uint8_t* at = new uint8_t[4];
             uint32_t attributetype = 0;
-            ReadContent(rawcontent, at, mftoffset + curoffset, 4);
+            ReadContent(rawcontent, at, mftentryoffset + curoffset, 4);
             ReturnUint32(&attributetype, at);
             delete[] at;
-            //std::cout << "Attribute Type: 0x" << std::hex << attributetype << std::dec << std::endl;
-            if(attributetype == 0x80) // DATA ATTRIBUTE
-            {
-                uint8_t* anl = new uint8_t[1];
-                uint8_t attributenamelength = 0;
-                ReadContent(rawcontent, anl, mftoffset + curoffset + 9, 1);
-                attributenamelength = (uint8_t)anl[0];
-                delete[] anl;
-                //std::cout << "Attribute Name Length: " << (int)attributenamelength << std::endl;
-                if(attributenamelength == 0) // DEFAULT DATA ENTRY
-                {
-                    if(isnonresident == 1)
-                    {
-                        // GET RUN LIST AND RETURN LAYOUT
-                        uint64_t totalmftsize = 0;
-                        GetRunListLayout(rawcontent, curnt, mftoffset + curoffset, attributelength, &runliststr);
-                        //std::cout << "Run List Layout: " << runliststr << std::endl;
-                        break;
-                    }
-                    else // is resident 0
-                    {
-                    }
-                }
-            }
-            curoffset += attributelength;
-            if(attributelength == 0)
-                break;
-        }
-        return runliststr;
-    }
-    else
-        return "";
+            std::cout << "Attribute Type: 0x" << std::hex << attributetype << std::dec << std::endl;
+	    if(attributetype == 0x10) // STANDARD_INFORMATION ATTRIBUTE - always resident
+	    {
+		uint8_t* cs = new uint8_t[4];
+		uint32_t contentsize = 0;
+		ReadContent(rawcontent, cs, mftentryoffset + curoffset + 16, 4);
+		ReturnUint32(&contentsize, cs);
+		delete[] cs;
+		uint8_t* co = new uint8_t[2];
+		uint16_t contentoffset = 0;
+		ReadContent(rawcontent, co, mftentryoffset + curoffset + 20, 2);
+		ReturnUint16(&contentoffset, co);
+		delete[] co;
+		uint8_t* cd = new uint8_t[8];
+		uint64_t createdate = 0;
+		ReadContent(rawcontent, cd, mftentryoffset + curoffset + contentoffset, 8);
+		ReturnUint(&createdate, cd, 8);
+		delete[] cd;
+		siforensics += "Create Date|" + ConvertNtfsTimeToHuman(createdate) + "\n";
+		uint8_t* md = new uint8_t[8];
+		uint64_t modifydate = 0;
+		ReadContent(rawcontent, md, mftentryoffset + curoffset + contentoffset + 8, 8);
+		ReturnUint(&modifydate, md, 8);
+		delete[] md;
+		siforensics += "Modify Date|" + ConvertNtfsTimeToHuman(modifydate) + "\n";
 
-     */ 
+		return siforensics;
+	    }
+            if(attributelength == 0 || attributetype == 0xffffffff)
+                break;
+	    curoffset += attributelength;
+	}
+    }
+
+    return siforensics;
     /*
      *          if(attrtype == 0x10) // $STANDARD_INFORMATION - always resident, treenode timestamps
                 {
@@ -596,7 +605,7 @@ std::string GetDataAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, u
                 }
             }
             curoffset += attributelength;
-            if(attributelength == 0)
+            if(attributelength == 0 || attributetype == 0xffffffff)
                 break;
         }
         return runliststr;
@@ -1224,7 +1233,7 @@ std::string ParseNtfsFile(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t n
     std::string standardinformationlayout = GetStandardInformationAttributeLayout(rawcontent, curnt, mftentryoffset);
     std::string filenamelayout = GetFileNameAttributeLayout(rawcontent, curnt, mftentryoffset);
     std::cout << "Data layout: " << datalayout << std::endl;
-    std::cout << "Standard Information layout: " << standardinformationlayout << std::endl;
+    std::cout << "Standard Information" << std::endl << standardinformationlayout << std::endl;
     std::cout << "File Name layout: " << filenamelayout << std::endl;
 
     return fileforensics;

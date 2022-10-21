@@ -20,6 +20,8 @@ std::string ParseFatFile(std::ifstream* rawcontent, fatinfo* curfat, std::string
 
 */
 
+std::string ConvertNtfsTimeToHuman(uint64_t ntfstime);
+
 std::string GetDataAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftoffset);
 std::string GetIndexAttributesLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
 std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
