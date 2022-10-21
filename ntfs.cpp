@@ -191,6 +191,229 @@ std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntf
     std::string silayout = "";
 
     return silayout;
+    /*
+    uint8_t* me0s = new uint8_t[5];
+    ReadContent(rawcontent, me0s, mftoffset, 4);
+    me0s[4] = '\0';
+    std::string me0str((char*)me0s);
+    delete[] me0s;
+    //std::cout << "MFT Entry 0 Signature: " << me0str << std::endl;
+    if(me0str.compare("FILE") == 0) // A PROPER MFT ENTRY
+    {
+        std::string runliststr = "";
+        // OFFSET TO THE FIRST ATTRIBUTE
+        uint8_t* fao = new uint8_t[2];
+        uint16_t firstattributeoffset = 0;
+        ReadContent(rawcontent, fao, mftoffset + 20, 2);
+        ReturnUint16(&firstattributeoffset, fao);
+        delete[] fao;
+        //std::cout << "First Attribute Offset: " << firstattributeoffset << std::endl;
+        // LOOP OVER ATTRIBUTES TO FIND DATA ATTRIBUTE
+        uint16_t curoffset = firstattributeoffset;
+        while(curoffset < curnt->mftentrysize * curnt->sectorspercluster * curnt->bytespersector)
+        {
+            //std::cout << "Current Offset: " << curoffset << std::endl;
+            // IS RESIDENT/NON-RESIDENT
+            uint8_t* rf = new uint8_t[1];
+            uint8_t isnonresident = 0; // 0 - Resident | 1 - Non-Resident
+            ReadContent(rawcontent, rf, mftoffset + curoffset + 8, 1);
+            isnonresident = (uint8_t)rf[0];
+            delete[] rf;
+            //std::cout << "Is None Resident: " << (int)isnonresident << std::endl;
+            // ATTRIBUTE LENGTH
+            uint8_t* al = new uint8_t[4];
+            uint32_t attributelength = 0;
+            ReadContent(rawcontent, al, mftoffset + curoffset + 4, 4);
+            ReturnUint32(&attributelength, al);
+            delete[] al;
+            //std::cout << "Attribute Length: " << attributelength << std::endl;
+            // ATTRIBUTE TYPE
+            uint8_t* at = new uint8_t[4];
+            uint32_t attributetype = 0;
+            ReadContent(rawcontent, at, mftoffset + curoffset, 4);
+            ReturnUint32(&attributetype, at);
+            delete[] at;
+            //std::cout << "Attribute Type: 0x" << std::hex << attributetype << std::dec << std::endl;
+            if(attributetype == 0x80) // DATA ATTRIBUTE
+            {
+                uint8_t* anl = new uint8_t[1];
+                uint8_t attributenamelength = 0;
+                ReadContent(rawcontent, anl, mftoffset + curoffset + 9, 1);
+                attributenamelength = (uint8_t)anl[0];
+                delete[] anl;
+                //std::cout << "Attribute Name Length: " << (int)attributenamelength << std::endl;
+                if(attributenamelength == 0) // DEFAULT DATA ENTRY
+                {
+                    if(isnonresident == 1)
+                    {
+                        // GET RUN LIST AND RETURN LAYOUT
+                        uint64_t totalmftsize = 0;
+                        GetRunListLayout(rawcontent, curnt, mftoffset + curoffset, attributelength, &runliststr);
+                        //std::cout << "Run List Layout: " << runliststr << std::endl;
+                        break;
+                    }
+                    else // is resident 0
+                    {
+                    }
+                }
+            }
+            curoffset += attributelength;
+            if(attributelength == 0)
+                break;
+        }
+        return runliststr;
+    }
+    else
+        return "";
+
+     */ 
+    /*
+     *          if(attrtype == 0x10) // $STANDARD_INFORMATION - always resident, treenode timestamps
+                {
+		    createdate = ConvertNtfsTimeToUnixTime(qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 24, 8)));
+		    modifydate = ConvertNtfsTimeToUnixTime(qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 32, 8)));
+		    statusdate = ConvertNtfsTimeToUnixTime(qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 40, 8)));
+		    accessdate = ConvertNtfsTimeToUnixTime(qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 48, 8)));
+		    accessflags = qFromLittleEndian<uint16_t>(curimg->ReadContent(curoffset + 56, 4));
+		    attrstr = "";
+		    if(attrflags == 0x00) // unallocated file
+			attrstr += "Not Allocated,";
+		    else if(attrflags == 0x01) // allocated file
+			attrstr += "Allocated,";
+		    else if(attrflags == 0x02) // unallocated directory
+			attrstr += "Not Allocated,";
+		    else if(attrflags == 0x03) // allocated directory
+			attrstr += "Allocated,";
+		    if(accessflags & 0x01) // READ ONLY
+			attrstr += "Read Only,";
+		    if(accessflags & 0x02) // Hidden
+			attrstr += "Hidden,";
+		    if(accessflags & 0x04) // System
+			attrstr += "System,";
+		    if(accessflags & 0x20) // Archive
+			attrstr += "Archive,";
+		    if(accessflags & 0x40) // Device
+			attrstr += "Device,";
+		    if(accessflags & 0x80) // Normal
+			attrstr += "Normal,";
+		    if(accessflags & 0x100) // Temporary
+			attrstr += "Temporary,";
+		    if(accessflags & 0x200) // Sparse File
+			attrstr += "Sparse File,";
+		    if(accessflags & 0x400) // Reparse Point
+			attrstr += "Reparse Point,";
+		    if(accessflags & 0x800) // Compressed
+			attrstr += "Compressed,";
+		    if(accessflags & 0x1000) // Offline
+			attrstr += "Offline,";
+		    if(accessflags & 0x2000) // Not Indexed
+			attrstr += "Not Indexed,";
+		    if(accessflags & 0x4000) // Encrypted
+			attrstr += "Encrypted,";
+                    // ADD ATTRSTR TO RETURN FOR THE PROPERTIES FILE
+		    out << "File Attributes|" << attrstr << "|Attributes list for the file." << Qt::endl;
+                    if(curpos > endoffset)
+                    {
+                        if(attrflags == 0x00) // unalloc file
+                        {
+                            if(accessflags & 0x4000) // encrypted
+                                itemtype = 13;
+                            else
+                                itemtype = 4;
+                            isdeleted = 1;
+                        }
+                        else if(attrflags == 0x02) // unalloc dir
+                        {
+                            if(accessflags & 0x4000) // encrypted
+                                itemtype = 13;
+                            else
+                                itemtype = 2;
+                            isdeleted = 1;
+                        }
+                        else
+                        {
+                            itemtype = 4;
+                            isdeleted = 1;
+                        }
+                    }
+                    else if(!parfilename.isEmpty())
+                    {
+                        if(parntinode != parentntinode)
+                        {
+                            if(attrflags == 0x00) // unalloc file
+                            {
+                                if(accessflags & 0x4000) // encrypted
+                                    itemtype = 13;
+                                else
+                                    itemtype = 4;
+                                isdeleted = 1;
+                            }
+                            else if(attrflags == 0x02) // unalloc dir
+                            {
+                                if(accessflags & 0x4000) // encrypted
+                                    itemtype = 13;
+                                else
+                                    itemtype = 2;
+                                isdeleted = 1;
+                            }
+                            else
+                            {
+                                itemtype = 4;
+                                isdeleted = 1;
+                            }
+                        }
+                        else
+                        {
+                            if(attrflags == 0x01) // alloc file
+                            {
+                                if(accessflags & 0x4000) // encrypted
+                                    itemtype = 13;
+                                else
+                                    itemtype = 5;
+                                isdeleted = 0;
+                            }
+                            else if(attrflags == 0x03) // alloc dir
+                            {
+                                if(accessflags & 0x4000) // encrypted
+                                    itemtype = 13;
+                                else
+                                    itemtype = 3;
+                                isdeleted = 0;
+                            }
+                            else
+                            {
+                                itemtype = 5;
+                                isdeleted = 0;
+                            }
+                        }
+                    }
+                    else
+                    {
+                        if(attrflags == 0x01) // alloc file
+                        {
+                            if(accessflags & 0x4000) // encrypted
+                                itemtype = 13;
+                            else
+                                itemtype = 5;
+                            isdeleted = 0;
+                        }
+                        else if(attrflags == 0x03) // alloc dir
+                        {
+                            if(accessflags & 0x4000) // encrypted
+                                itemtype = 13;
+                            else
+                                itemtype = 3;
+                            isdeleted = 0;
+                        }
+                        else
+                        {
+                            itemtype = 5;
+                            isdeleted = 0;
+                        }
+                    }
+                }
+
+     */ 
 }
 
 std::string GetFileNameAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset)
@@ -198,6 +421,101 @@ std::string GetFileNameAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curn
     std::string fnlayout = "";
     
     return fnlayout;
+    /*
+    uint8_t* me0s = new uint8_t[5];
+    ReadContent(rawcontent, me0s, mftoffset, 4);
+    me0s[4] = '\0';
+    std::string me0str((char*)me0s);
+    delete[] me0s;
+    //std::cout << "MFT Entry 0 Signature: " << me0str << std::endl;
+    if(me0str.compare("FILE") == 0) // A PROPER MFT ENTRY
+    {
+        std::string runliststr = "";
+        // OFFSET TO THE FIRST ATTRIBUTE
+        uint8_t* fao = new uint8_t[2];
+        uint16_t firstattributeoffset = 0;
+        ReadContent(rawcontent, fao, mftoffset + 20, 2);
+        ReturnUint16(&firstattributeoffset, fao);
+        delete[] fao;
+        //std::cout << "First Attribute Offset: " << firstattributeoffset << std::endl;
+        // LOOP OVER ATTRIBUTES TO FIND DATA ATTRIBUTE
+        uint16_t curoffset = firstattributeoffset;
+        while(curoffset < curnt->mftentrysize * curnt->sectorspercluster * curnt->bytespersector)
+        {
+            //std::cout << "Current Offset: " << curoffset << std::endl;
+            // IS RESIDENT/NON-RESIDENT
+            uint8_t* rf = new uint8_t[1];
+            uint8_t isnonresident = 0; // 0 - Resident | 1 - Non-Resident
+            ReadContent(rawcontent, rf, mftoffset + curoffset + 8, 1);
+            isnonresident = (uint8_t)rf[0];
+            delete[] rf;
+            //std::cout << "Is None Resident: " << (int)isnonresident << std::endl;
+            // ATTRIBUTE LENGTH
+            uint8_t* al = new uint8_t[4];
+            uint32_t attributelength = 0;
+            ReadContent(rawcontent, al, mftoffset + curoffset + 4, 4);
+            ReturnUint32(&attributelength, al);
+            delete[] al;
+            //std::cout << "Attribute Length: " << attributelength << std::endl;
+            // ATTRIBUTE TYPE
+            uint8_t* at = new uint8_t[4];
+            uint32_t attributetype = 0;
+            ReadContent(rawcontent, at, mftoffset + curoffset, 4);
+            ReturnUint32(&attributetype, at);
+            delete[] at;
+            //std::cout << "Attribute Type: 0x" << std::hex << attributetype << std::dec << std::endl;
+            if(attributetype == 0x80) // DATA ATTRIBUTE
+            {
+                uint8_t* anl = new uint8_t[1];
+                uint8_t attributenamelength = 0;
+                ReadContent(rawcontent, anl, mftoffset + curoffset + 9, 1);
+                attributenamelength = (uint8_t)anl[0];
+                delete[] anl;
+                //std::cout << "Attribute Name Length: " << (int)attributenamelength << std::endl;
+                if(attributenamelength == 0) // DEFAULT DATA ENTRY
+                {
+                    if(isnonresident == 1)
+                    {
+                        // GET RUN LIST AND RETURN LAYOUT
+                        uint64_t totalmftsize = 0;
+                        GetRunListLayout(rawcontent, curnt, mftoffset + curoffset, attributelength, &runliststr);
+                        //std::cout << "Run List Layout: " << runliststr << std::endl;
+                        break;
+                    }
+                    else // is resident 0
+                    {
+                    }
+                }
+            }
+            curoffset += attributelength;
+            if(attributelength == 0)
+                break;
+        }
+        return runliststr;
+    }
+    else
+        return "";
+
+     */ 
+	 /*
+	  *     else if(attrtype == 0x30) // $FILE_NAME - always resident
+                {
+		    uint8_t filenamespace = qFromLittleEndian<uint8_t>(curimg->ReadContent(curoffset + 89, 1));
+		    if(filenamespace != 0x02)
+		    {
+			uint64_t filecreate = qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 32, 8));
+			uint64_t filemodify = qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 40, 8));
+			uint64_t filestatus = qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 48, 8));
+			uint64_t fileaccess = qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 56, 8));
+                        out << "$FILE_NAME Create|" << ConvertWindowsTimeToUnixTimeUTC(filecreate) << "|File creation time as recorded in the $FILE_NAME attribute." << Qt::endl;
+                        out << "$FILE_NAME Modify|" << ConvertWindowsTimeToUnixTimeUTC(filemodify) << "|File modification time as recorded in the $FILE_NAME attribute." << Qt::endl;
+                        out << "$FILE_NAME Status Changed|" << ConvertWindowsTimeToUnixTimeUTC(filestatus) << "|File status changed time as recorded in the $FILE_NAME attribute." << Qt::endl;
+                        out << "$FILE_NAME Accessed|" << ConvertWindowsTimeToUnixTimeUTC(fileaccess) << "|File accessed time as recorded in the $FILE_NAME attribute." << Qt::endl;
+		    }
+                }
+
+	  */
+
 }
 // will need to fix this so it accounts for resident and non-resident...
 // right now it is non-resident only since the mft is always non-resident..
@@ -285,6 +603,77 @@ std::string GetDataAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, u
     }
     else
         return "";
+    /*
+     *		    if(namelength == 0) // main file content - not alternate data stream
+		    {
+			logicalsize = 0;
+			quint64 physicalsize = 0;
+			layout = "";
+			if(resflags == 0x00) // resident
+			{
+			    uint32_t contentsize = qFromLittleEndian<uint32_t>(curimg->ReadContent(curoffset + 16, 4));
+			    uint16_t contentoffset = qFromLittleEndian<uint16_t>(curimg->ReadContent(curoffset + 20, 2));
+			    logicalsize = contentsize;
+			    physicalsize = contentsize;
+			    dirlayout = QString(QString::number(curoffset + contentoffset) + "," + QString::number(contentsize) + ";");
+                            // RETURN LOGICALSIZE FOR NODE DATA, PHYSICALSIZE AND LAYOUT FOR PROPERTIES FILE
+			}
+			else if(resflags == 0x01) // non-resident
+			{
+			    logicalsize = qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 48, 8));
+			    GetRunListLayout(curimg, curstartsector, bytespercluster, mftentrybytes, curoffset, &dirlayout);
+			    //qDebug() << "layout:" << layout;
+			    for(int j=0; j < dirlayout.split(";", Qt::SkipEmptyParts).count(); j++)
+			    {
+				physicalsize += dirlayout.split(";", Qt::SkipEmptyParts).at(j).split(",").at(1).toULongLong();
+			    }
+                            // RETURN LOGICALSIZE FOR THE NODE DATA, PHYSICALSIZE AND LAYOUT FOR PROPERTIES FILE
+			}
+                        out << "Physical Size|" << QString::number(physicalsize) << "|Physical size in bytes for the file." << Qt::endl;
+			out << "Logical Size|" << QString::number(logicalsize) << "|Size in Bytes for the file." << Qt::endl;
+                        out << "Layout|" << dirlayout << "|File layout in bytes and formatted as offset,size; entries." << Qt::endl;
+		    }
+		    else // alternate data stream
+		    {
+			attrname = "";
+			for(int k=0; k < namelength; k++)
+			    attrname += QString(QChar(qFromLittleEndian<uint16_t>(curimg->ReadContent(curoffset + nameoffset + k*2, 2))));
+			//qDebug() << "ads:" << QString("$DATA:" + attrname);
+			quint64 logicalsize = 0;
+			quint64 physicalsize = 0;
+			layout = "";
+			if(resflags == 0x00) // resident
+			{
+			    uint32_t contentsize = qFromLittleEndian<uint32_t>(curimg->ReadContent(curoffset + 16, 4));
+			    uint16_t contentoffset = qFromLittleEndian<uint16_t>(curimg->ReadContent(curoffset + 20, 2));
+			    logicalsize = contentsize;
+			    physicalsize = contentsize;
+			    layout = QString(QString::number(curoffset + contentoffset) + "," + QString::number(contentsize) + ";");
+			}
+			else if(resflags == 0x01) // non-resident
+			{
+			    logicalsize = qFromLittleEndian<uint64_t>(curimg->ReadContent(curoffset + 48, 8));
+			    GetRunListLayout(curimg, curstartsector, bytespercluster, mftentrybytes, curoffset, &layout);
+			    for(int j=0; j < layout.split(";", Qt::SkipEmptyParts).count(); j++)
+				physicalsize += layout.split(";", Qt::SkipEmptyParts).at(j).split(",").at(1).toULongLong();
+			}
+                        QList<QVariant> tmpnode;
+                        tmpnode.clear();
+                        QList<QString> tmpprop;
+                        tmpprop.clear();
+                        tmpnode << QString("$DATA:" + attrname) << logicalsize;
+                        tmpprop.append(QString("Physical Size|" + QString::number(physicalsize) + "|Physical size for the file in bytes."));
+			tmpprop.append(QString("Logical Size|" + QString::number(logicalsize) + "|Logical size for the file in bytes."));
+                        tmpprop.append(QString("Layout|" + layout + "|File layout in bytes as offset,size;."));
+                        adsnodelist.append(tmpnode);
+                        adsproplist.append(tmpprop);
+                        tmpnode.clear();
+                        tmpprop.clear();
+                        // RETURN ATTRNAME, LOGICALSIZE FOR ADS NODE DATA AND PHYSICALSIZE AND LAYOUT FOR PROPERTIES FILE
+			// NEED TO DO SOMETHING WITH THE ADS PROPERTIES AS WELL AS THE FILE PROPERTIES...
+		    }
+
+     */ 
 }
 
 /*
