@@ -15,3 +15,6 @@ This tool will be the basis for the implementation of wombatlogical imaging tool
 * XFS
 * HFS+
 * ISO
+* UDF
+* APFS
+* BTRFS
