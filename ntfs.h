@@ -24,8 +24,9 @@ std::string ConvertNtfsTimeToHuman(uint64_t ntfstime);
 
 std::string GetDataAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftoffset);
 std::string GetIndexAttributesLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
-std::string GetStandardInformationAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
-std::string GetFileNameAttributeLayout(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
+std::string GetStandardInformationAttribute(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
+std::string GetFileNameAttribute(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
+std::string GetDataAttribute(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t mftentryoffset);
 
 uint64_t ParseNtfsPath(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntinode, std::string childpath);
 std::string ParseNtfsFile(std::ifstream* rawcontent, ntfsinfo* curnt, uint64_t ntinode, std::string childfile);
