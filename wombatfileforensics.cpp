@@ -24,6 +24,7 @@ void ShowUsage(int outtype)
         printf("Arguments :\n");
 	printf("-r\t: Recurse subdirectories.\n");
 	printf("-c\t: Calculate the hash for the file(s).\n");
+        printf("-s\t: Get File Signature for the file(s).\n");
 	printf("-w\t: Include file slack in output.\n");
 	printf("-o FILE\t: Output file's contents to FILE.\n");
         printf("-V\t: Prints Version information\n");
@@ -210,262 +211,6 @@ void DetermineFileSystem(std::string devicestring, int* fstype)
 
     /*
     // WILL WRITE FILE SYSTEM INFORMATION IN THIS FUNCTION AND ONLY RETURN THE QSTRING(FILESYSTEMNAME,FILESYSTEMTYPE) TO BE USED BY THE PARTITION
-    if(winsig == 0xaa55 && bfssig != "1SFB") // FAT OR NTFS OR BFS
-    {
-	if(exfatstr.startsWith("NTFS")) // NTFS
-	{
-	    qInfo() << "NTFS File System Found. Parsing...";
-	    out << "File System Type Int|5|Internal File System Type represented as an integer." << Qt::endl;
-	    out << "File System Type|NTFS|File System Type String." << Qt::endl;
-	    out << "Bytes Per Sector|" << QString::number(qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 11, 2))) << "|Number of bytes per sector, usually 512." << Qt::endl;
-	    out << "Sectors Per Cluster|" << QString::number(qFromLittleEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 13, 1))) << "|Number of sectors per cluster." << Qt::endl;
-	    out << "Total Sectors|" << QString::number(qFromLittleEndian<qulonglong>(curimg->ReadContent(curstartsector*512 + 40, 8))) << "|Number of sectors in the file system." << Qt::endl;
-	    out << "Bytes Per Cluster|" << QString::number(qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 11, 2)) * qFromLittleEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 13, 1))) << "|Number of bytes per cluster" << Qt::endl;
-	    out << "MFT Starting Cluster|" << QString::number(qFromLittleEndian<qulonglong>(curimg->ReadContent(curstartsector*512 + 48, 8))) << "|Starting cluster number for the MFT" << Qt::endl;
-	    out << "MFT Starting Offset|" << QString::number(curstartsector*512 + qFromLittleEndian<qulonglong>(curimg->ReadContent(curstartsector*512 + 48, 8)) * qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 11, 2)) * qFromLittleEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 13, 1))) << "|Starting byte for the MFT" << Qt::endl;
-	    out << "MFT Entry Size|" << QString::number(qFromLittleEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 64, 1))) << "|Entry size in clusters for an MFT Entry" << Qt::endl;
-            out << "MFT Entry Bytes|1024| Entry size in bytes for an MFT Entry" << Qt::endl; // entrysize is stored at offset 64, then it should be entrysize * bytespercluster
-	    out << "Serial Number|" << QString("0x" + QString::number(qFromLittleEndian<qulonglong>(curimg->ReadContent(curstartsector*512 + 72, 8)), 16)) << "|Serial number for the file system volume" << Qt::endl;
-            out << "Index Record Size|" << QString::number(qFromLittleEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 68, 1))) << "|Index record size for an index record." << Qt::endl;
-
-            uint bytespercluster = qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 11, 2)) * qFromLittleEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 13, 1));
-            qint64 mftoffset = curstartsector*512 + qFromLittleEndian<qulonglong>(curimg->ReadContent(curstartsector*512 + 48, 8)) * bytespercluster;
-            // GET THE MFT LAYOUT TO WRITE TO PROP FILE
-            if(QString::fromStdString(curimg->ReadContent(mftoffset, 4).toStdString()) == "FILE") // a proper MFT entry
-            {
-                int curoffset = qFromLittleEndian<uint16_t>(curimg->ReadContent(mftoffset + 20, 2)); // mft offset + offset to first attribute
-                for(int i=0; i < qFromLittleEndian<uint16_t>(curimg->ReadContent(mftoffset + 40, 2)); i++) // loop over attributes until hit attribute before the next attribute id
-                {
-                    if(qFromLittleEndian<uint32_t>(curimg->ReadContent(mftoffset + curoffset, 4)) == 0x80 && qFromLittleEndian<uint8_t>(curimg->ReadContent(mftoffset + curoffset + 9, 1)) == 0) // attrtype | namelength > default$DATA attribute to parse
-                        break;
-                    curoffset += qFromLittleEndian<uint32_t>(curimg->ReadContent(mftoffset + curoffset + 4, 4)); // attribute length
-                }
-                QString runliststr = "";
-                quint64 mftsize = 0;
-                GetRunListLayout(curimg, curstartsector, bytespercluster, 1024, mftoffset + curoffset, &runliststr);
-                //qDebug() << "runliststr for MFT Layout:" << runliststr;
-		for(int j=0; j < runliststr.split(";", Qt::SkipEmptyParts).count(); j++)
-		{
-		    mftsize += runliststr.split(";", Qt::SkipEmptyParts).at(j).split(",").at(1).toULongLong();
-		}
-                //qDebug() << "runliststr for MFT Layout:" << runliststr << "mft size:" << mftsize;
-	        out << "MFT Layout|" << runliststr << "|Layout for the MFT in starting offset, size; format" << Qt::endl;
-                out << "Max MFT Entries|" << QString::number((mftsize)/1024) << "|Max MFT Entries allowed in the MFT" << Qt::endl;
-                runliststr = "";
-                mftsize = 0;
-            }
-            // GET VOLUME LABEL FROM THE $VOLUME_NAME SYSTEM FILE
-            if(QString::fromStdString(curimg->ReadContent(mftoffset + 3 * 1024, 4).toStdString()) == "FILE") // a proper MFT entry
-            {
-                int curoffset = qFromLittleEndian<uint16_t>(curimg->ReadContent(mftoffset + 3*1024 + 20, 2)); // offset to first attribute
-                for(uint i=0; i < qFromLittleEndian<uint16_t>(curimg->ReadContent(mftoffset + 3*1024 + 40, 2)); i++) // loop over attributes until get to next attribute id
-                {
-                    if(qFromLittleEndian<uint32_t>(curimg->ReadContent(mftoffset + 3*1024 + curoffset, 4)) == 0x60) // $VOLUME_NAME attribute to parse (always resident)
-                        break;
-                    curoffset += qFromLittleEndian<uint32_t>(curimg->ReadContent(mftoffset + 3*1024 + curoffset + 4, 4));
-                }
-                for(uint k=0; k < qFromLittleEndian<uint32_t>(curimg->ReadContent(mftoffset + 3*1024 + curoffset + 16, 4))/2; k++)
-                    partitionname += QString(QChar(qFromLittleEndian<uint16_t>(curimg->ReadContent(mftoffset + 3*1024 + curoffset + qFromLittleEndian<uint16_t>(curimg->ReadContent(mftoffset + 3*1024 + curoffset + 20, 2)) + k*2, 2))));
-                out << "Volume Label|" << partitionname << "|Volume Label for the file system." << Qt::endl;
-                partitionname += " [NTFS]";
-            }
-	}
-    }
-    else if(extsig == 0xef53) // EXT2/3/4
-    {
-        out << "File System Type Int|6|Internal File System Type represented as an integer." << Qt::endl;
-        for(int i=0; i < 16; i++)
-        {
-            if(qFromBigEndian<uint8_t>(curimg->ReadContent(curstartsector*512 + 1144 + i, 1)) == 0x00)
-                break;
-            else
-                partitionname += QString::fromStdString(curimg->ReadContent(curstartsector*512 + 1144 + i, 1).toStdString());
-        }
-        //qDebug() << "partition name:" << partitionname;
-        out << "Volume Label|" << partitionname << "|Volume Label for the file system." << Qt::endl;
-        out << "Created Time|" << QDateTime::fromSecsSinceEpoch(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1288, 4)), QTimeZone::utc()).toString("MM/dd/yyyy hh:mm:ss AP") << "|Creation time for the file system." << Qt::endl;
-        out << "Mount Time|" << QDateTime::fromSecsSinceEpoch(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1068, 4)), QTimeZone::utc()).toString("MM/dd/yyyy hh:mm:ss AP") << "|Mount time for the file system." << Qt::endl;
-        out << "Write Time|" << QDateTime::fromSecsSinceEpoch(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1072, 4)), QTimeZone::utc()).toString("MM/dd/yyyy hh:mm:ss AP") << "|Write time for the file system." << Qt::endl;
-        out << "Last Check Time|" << QDateTime::fromSecsSinceEpoch(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1088, 4)), QTimeZone::utc()).toString("MM/dd/yyyy hh:mm:ss AP") << "|Last check time for the file system." << Qt::endl;
-        out << "Current State|";
-        if(qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 1082, 2)) == 0x01)
-            out << "Cleanly unmounted";
-        else
-            out << "Errors detected";
-        out << "|Condition of the file system at lsat unmount." << Qt::endl;
-        out << "Compatible Features|";
-        uint32_t compatflags = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1116, 4));
-        if(compatflags & 0x200)
-            out << "Sparse Super Block,";
-        if(compatflags & 0x100)
-            out << "Exclude Bitmap,";
-        if(compatflags & 0x80)
-            out << "Exclude Inodes,";
-        if(compatflags & 0x40)
-            out << "Lazy Block Groups,";
-        if(compatflags & 0x20)
-            out << "Indexed Directories,";
-        if(compatflags & 0x10)
-            out << "Reserved GDT,";
-        if(compatflags & 0x08)
-            out << "Extended Attributes,";
-        if(compatflags & 0x04)
-            out << "Journal,";
-        if(compatflags & 0x02)
-            out << "Imagic Inodes,";
-        if(compatflags & 0x01)
-            out << "Directory preallocation";
-        out << "|File system compatible feature set." << Qt::endl;
-        uint32_t incompatflags = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1120, 4));
-        out << "Incompatible Features|";
-	if(incompatflags & 0x10000)
-	    out << "Encrypted inodes,";
-	if(incompatflags & 0x8000)
-	    out << "Data in inode,";
-	if(incompatflags & 0x4000)
-	    out << "Large Directory >2GB or 3-level htree,";
-	if(incompatflags & 0x2000)
-	    out << "Metadata checksum seed in superblock,";
-	if(incompatflags & 0x1000)
-	    out << "Data in Directory Entry,";
-	if(incompatflags & 0x400)
-	    out << "Inodes can store large extended attributes,";
-	if(incompatflags & 0x200)
-	    out << "Flexible block groups,";
-	if(incompatflags & 0x100)
-	    out << "Multiple mount protection,";
-	if(incompatflags & 0x80)
-	    out << "FS size over 2^32 blocks,";
-	if(incompatflags & 0x40)
-	    out << "Files use Extents,";
-	if(incompatflags & 0x10)
-	    out << "Meta block groups,";
-	if(incompatflags & 0x08)
-	    out << "Seperate Journal device,";
-	if(incompatflags & 0x04)
-	    out << "FS needs journal recovery,";
-	if(incompatflags & 0x02)
-	    out << "Directory entries record file type,";
-	if(incompatflags & 0x01)
-	    out << "Compression";
-        out << "|File system incompatible Feature set." << Qt::endl;
-        uint32_t readonlyflags = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1124, 4));
-        out << "Read Only Compatible Features|";
-	if(readonlyflags & 0x2000)
-	    out << "Tracks project quotas,";
-	if(readonlyflags & 0x1000)
-	    out << "Read only FS,";
-	if(readonlyflags & 0x800)
-	    out << "Replica support,";
-	if(readonlyflags & 0x400)
-	    out << "Metadata Checksumming support,";
-	if(readonlyflags & 0x200)
-	    out << "Bigalloc support,";
-	if(readonlyflags & 0x100)
-	    out << "Quota is handled transactionally with journal,";
-	if(readonlyflags & 0x80)
-	    out << "Snapshot,";
-	if(readonlyflags & 0x40)
-	    out << "Large Inodes exist,";
-	if(readonlyflags & 0x20)
-	    out << "EXT3 32k subdir limit doesn't exist,";
-	if(readonlyflags & 0x10)
-	    out << "Group descriptors have checksums,";
-	if(readonlyflags & 0x08)
-	    out << "Space usage stored in i_blocks in units of fs_blocks, not 512-byte sectors,";
-	if(readonlyflags & 0x04)
-	    out << "Was intented for use with htree directories,";
-	if(readonlyflags & 0x02)
-	    out << "Allow storing files larger than 2GB,";
-	if(readonlyflags & 0x01)
-	    out << "Sparse superblocks";
-        out << "|File system read only compatible feature set." << Qt::endl;
-        out << "File System Type|";
-        if(((compatflags & 0x00000200UL) != 0) || ((incompatflags & 0x0001f7c0UL) != 0) || ((readonlyflags & 0x00000378UL) != 0))
-        {
-	    qInfo() << "EXT4 File System Found. Parsing...";
-            out << "EXT4";
-            partitionname += QString(" [EXT4]");
-        }
-        else if(((compatflags & 0x00000004UL) != 0) || ((incompatflags & 0x0000000cUL) != 0))
-        {
-	    qInfo() << "EXT3 File System Found. Parsing...";
-            out << "EXT3";
-            partitionname += QString(" [EXT3]");
-        }
-        else
-        {
-	    qInfo() << "EXT2 File System Found. Parsing...";
-            out << "EXT2";
-            partitionname += QString(" [EXT2]");
-        }
-        //qDebug() << "partition name with fstype:" << partitionname;
-        out << "|File system type string." << Qt::endl;
-        uint16_t grpdescsize = 32;
-	if(incompatflags & 0x80)
-        {
-            grpdescsize = qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector * 512 + 1278, 2));
-        }
-        //qDebug() << "grpdescsize:" << grpdescsize;
-        out << "Block Group Descriptor Size|" << QString::number(grpdescsize) << "|Size in bytes of the block group descriptor table entry." << Qt::endl;
-	uint32_t fsblockcnt = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1028, 4));
-	uint32_t blkgrpblkcnt = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1056, 4));
-	uint32_t blocksize = 1024 * pow(2, qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1048, 4)));
-        uint32_t blkgrp0startblk = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1044, 4));
-        out << "File System Inode Count|" << QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1024, 4))) << "|Number of inodes within the file system." << Qt::endl;
-        out << "File System Block Count|" << QString::number(fsblockcnt) << "|Number of blocks within the file system." << Qt::endl;
-        out << "Block Group 0 Start Block|" << QString::number(blkgrp0startblk) << "|Starting block number for block group 0." << Qt::endl;
-        out << "Block Size|" << QString::number(blocksize) << "|Block size in bytes." << Qt::endl;
-	out << "Fragment Size|" << QString::number(1024 * pow(2, qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1052, 4)))) << "|Fragment size in bytes." << Qt::endl;
-	out << "Block Group Block Count|" << QString::number(blkgrpblkcnt) << "|Number of blocks within a block group." << Qt::endl;
-	out << "Block Group Fragment Count|" << QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1060, 4))) << "|Number of fragments within a block group." << Qt::endl;
-	uint32_t blkgrpinodecnt = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1064, 4));
-	out << "Block Group Inode Count|" << QString::number(blkgrpinodecnt) << "|Number of inodes within a block group." << Qt::endl;
-	uint32_t creatoros = qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1096, 4));
-	out << "Creator OS|";
-	if(creatoros == 0x00)
-	    out << "Linux";
-	else if(creatoros == 0x03)
-	    out << "FreeBSD";
-	out << "|Operating System used to create the file system." << Qt::endl;
-	out << "Inode Size|" << QString::number(qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector * 512 + 1112, 2))) << "|Size of an inode in bytes." << Qt::endl;
-	out << "Last Mounted Path|" << QString::fromStdString(curimg->ReadContent(curstartsector * 512 + 1160, 64).toStdString()) << "|Path where file system was last mounted." << Qt::endl;
-	uint32_t blockgroupcount = fsblockcnt / blkgrpblkcnt;
-	uint blkgrpcntrem = fsblockcnt % blkgrpblkcnt;
-	if(blkgrpcntrem > 0)
-	    blockgroupcount++;
-	if(blockgroupcount == 0)
-	    blockgroupcount = 1;
-        //qDebug() << "curstartsector:" << curstartsector;
-        //qDebug() << "blkgrp0startblock:" << blkgrp0startblk;
-	QString inodeaddresstable = "";
-        //qDebug() << "blockgroupcount:" << blockgroupcount;
-        //qDebug() << "blocksize:" << blocksize;
-	for(uint i=0; i < blockgroupcount; i++)
-	{
-	    if(blocksize == 1024)
-		inodeaddresstable += QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 2 * blocksize + i * grpdescsize + 8, 4))) + ",";
-	    else
-		inodeaddresstable += QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + blocksize + i * grpdescsize + 8, 4))) + ",";
-	}
-	//qDebug() << "inodeaddresstable:" << inodeaddresstable;
-	out << "Inode Address Table|" << inodeaddresstable << "|Table of the Inode addresses for a block group." << Qt::endl;
-	out << "Root Inode Table Address|";
-	if(blkgrpinodecnt > 2)
-	    out << QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 2056, 4)));
-	else
-	    out << QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 2088, 4)));
-	out << "|Starting address for the Root Directory Inode Table." << Qt::endl;
-	out << "Revision Level|" << QString::number(qFromLittleEndian<uint32_t>(curimg->ReadContent(curstartsector * 512 + 1100, 4))) + "." + QString::number(qFromLittleEndian<uint16_t>(curimg->ReadContent(curstartsector * 512 + 1086, 2))) << "|File system revision level." << Qt::endl;
-	// NEED TO IMPLEMENT THESE FS PROPERTIES SO I CAN USE THEM WHEN I PARSE THE EXT2/3/4 FS
-        fsinfo.insert("partoffset", QVariant((qulonglong)(512 * partoffset)));
-        //qDebug() << "INODE SIZE ACCORDING TO SUPERBLOCK:" << fsinfo.value("inodesize").toUInt();
-        //qDebug() << "compatflags:" << fsinfo.value("compatflags").toUInt() << "incompatflags:" << fsinfo.value("incompatflags").toUInt() << "readonlyflags:" << fsinfo.value("readonlyflags").toUInt();
-        //if(fsinfo.value("incompatflags").toUInt() & 0x40)
-        //    qDebug() << "fs uses extents.";
-        
-	//qDebug() << "blocks for group descriptor table:" << (32 * (fsinfo.value("fsblockcnt").toUInt() / fsinfo.value("blockgroupblockcnt").toUInt())) / fsinfo.value("blocksize").toUInt();
-    }
     else if(apfsig == "NXSB") // APFS Container
     {
 	qInfo() << "APFS Container Found. Parsing...";
@@ -1026,7 +771,6 @@ void DetermineFileSystem(std::string devicestring, int* fstype)
 
     return partitionname;
 }
-
      *
      */ 
 
@@ -1058,59 +802,207 @@ void HashFile(std::string filename, std::string whlfile)
     fclose(whlptr);
 }
  */ 
-
 /*
- * GET LIST OF MOUNT POINTS BY DEVICE MNTPT
-#include <stdio.h>
-#include <stdlib.h>
-#include <mntent.h>
-
-int main(void)
+// GENERATE FILE SIGNATURE ANALYSIS FOR CONTENTS OF A FILE
+QString GenerateCategorySignature(ForImg* curimg, QString filename, qulonglong fileoffset)
 {
-  struct mntent *ent;
-  FILE *aFile;
+    QString mimestr = "";
+    if(filename.startsWith("$UPCASE_TABLE"))
+	mimestr = "System File/Up-case Table";
+    else if(filename.startsWith("$ALLOC_BITMAP"))
+	mimestr = "System File/Allocation Bitmap";
+    else if(filename.startsWith("$UpCase"))
+	mimestr = "Windows System/System File";
+    else if(filename.startsWith("$MFT") || filename.startsWith("$MFTMirr") || filename.startsWith("$LogFile") || filename.startsWith("$Volume") || filename.startsWith("$AttrDef") || filename.startsWith("$Bitmap") || filename.startsWith("$Boot") || filename.startsWith("$BadClus") || filename.startsWith("$Secure") || filename.startsWith("$Extend"))
+        mimestr = "Windows System/System File";
+    else
+    {
+	// NON-QT WAY USING LIBMAGIC
+	QByteArray sigbuf = curimg->ReadContent(fileoffset, 1024);
+	magic_t magical;
+	const char* catsig;
+	//magical = magic_open(MAGIC_NONE);
+	magical = magic_open(MAGIC_MIME_TYPE);
+	magic_load(magical, NULL);
+	catsig = magic_buffer(magical, sigbuf.data(), sigbuf.count());
+	std::string catsigstr(catsig);
+	mimestr = QString::fromStdString(catsigstr);
+	magic_close(magical);
+	for(int i=0; i < mimestr.count(); i++)
+	{
+	    if(i == 0 || mimestr.at(i-1) == ' ' || mimestr.at(i-1) == '-' || mimestr.at(i-1) == '/')
+		mimestr[i] = mimestr[i].toUpper();
+	}
+	//qDebug() << "filename:" << filename << "mimestr:" << mimestr;
+	if(mimestr.contains("Application/Octet-Stream"))
+	{
+	    if(sigbuf.at(0) == '\x4c' && sigbuf.at(1) == '\x00' && sigbuf.at(2) == '\x00' && sigbuf.at(3) == '\x00' && sigbuf.at(4) == '\x01' && sigbuf.at(5) == '\x14' && sigbuf.at(6) == '\x02' && sigbuf.at(7) == '\x00') // LNK File
+		mimestr = "Windows System/Shortcut";
+	    else if(strcmp(filename.toStdString().c_str(), "INFO2") == 0 && (sigbuf.at(0) == 0x04 || sigbuf.at(0) == 0x05))
+		mimestr = "Windows System/Recycler";
+	    else if(filename.startsWith("$I") && (sigbuf.at(0) == 0x01 || sigbuf.at(0) == 0x02))
+		mimestr = "Windows System/Recycle.Bin";
+	    else if(filename.endsWith(".pf") && sigbuf.at(4) == 0x53 && sigbuf.at(5) == 0x43 && sigbuf.at(6) == 0x43 && sigbuf.at(7) == 0x41)
+		mimestr = "Windows System/Prefetch";
+	    else if(filename.endsWith(".pf") && sigbuf.at(0) == 0x4d && sigbuf.at(1) == 0x41 && sigbuf.at(2) == 0x4d)
+		mimestr = "Windows System/Prefetch";
+	    else if(sigbuf.at(0) == '\x72' && sigbuf.at(1) == '\x65' && sigbuf.at(2) == '\x67' && sigbuf.at(3) == '\x66') // 72 65 67 66 | regf
+		mimestr = "Windows System/Registry";
+	}
+        else if(mimestr.contains("Text/"))
+        {
+            if(filename.endsWith(".mbox"))
+            {
+                mimestr = "Email/MBox";
+            }
+        }
+        else if(mimestr.contains("/Zip"))
+        {
+	    //qDebug() << "filename:" << filename << "mimestr:" << mimestr;
+	    QByteArray officecheck = curimg->ReadContent(fileoffset, 4096);
+	    //qDebug() << QString(officecheck.toHex());
+	    if(officecheck.toHex().contains(QString("776f72642f").toStdString().c_str())) // "word/" (.docx)
+	    {
+		mimestr = "Office Document/Microsoft Word 2007+";
+		//qDebug() << "it's a word document...";
+	    }
+	    else if(officecheck.toHex().contains(QString("786c2f").toStdString().c_str())) // "xl/" (.xlsx)
+	    {
+		mimestr = "Office Document/Microsoft Excel 2007+";
+	    }
+	    else if(officecheck.toHex().contains(QString("7070742f").toStdString().c_str())) // "ppt/" (.pptx)
+	    {
+		mimestr = "Office Document/Microsoft PowerPoint 2007+";
+	    }
+	}
+	else if(mimestr.contains("/Vnd.oasis.opendocument.text"))
+	{
+	    mimestr = "Office Document/Open Document Text";
+	}
+    }
+	    //else
+		//qDebug() << "something went wrong...";
 
-  aFile = setmntent("/proc/mounts", "r");
-  if (aFile == NULL) {
-    perror("setmntent");
-    exit(1);
-  }
-  while (NULL != (ent = getmntent(aFile))) {
-    printf("%s %s\n", ent->mnt_fsname, ent->mnt_dir);
-  }
-  endmntent(aFile);
+	    // might not need the full contents, just need more hex and see if it has the:
+	    // word/ folder (0x776f72642f) for .docx
+	    // xl/ folder (0x786c2f) for .xlsx
+	    // ppt/ folder (0x7070742f) for .pptx
+
+    //else if(filename.startsWith("$INDEX_ROOT:") || filename.startsWith("$DATA:") || filename.startWith("$INDEX_ALLOCATION:"))
+
+    return mimestr;
+    //return QString(mimecategory + "/" + mimesignature);
+    // WILL NEED TO REIMPLEMENT ALL THE BELOW BASED ON THE NEW LIBMAGIC STUFF
+    //if(mimesignature.contains("text"))
+//	mimecategory = "Text";
+//    else
+//	mimecategory = "Unknown";
+
+//    if(mimestr.isEmpty())
+//        return QString(mimecategory + "/" + mimesignature);
+//    else
+//        return mimestr;
+
+    // OLD CODE NOT IN USE
+    QString mimestr = "";
+    // maybe a problem with file size requested being larger than the actual file size..
+    QByteArray sigbuf = curimg->ReadContent(fileoffset, 1024);
+    qDebug() << filename << QString::fromStdString(sigbuf.left(6).toStdString());
+    QMimeDatabase mimedb;
+    const QMimeType mimetype = mimedb.mimeTypeForData(sigbuf);
+    QString geniconstr = mimetype.genericIconName();
+    QString mimesignature = mimetype.comment();
+    //qDebug() << "filename:" << filename << "mimesignature:" << mimesignature;
+    QString mimecategory = "";
+    if(geniconstr.contains("document")) // Document
+        mimecategory = "Document";
+    else if(geniconstr.contains("video")) // Video
+        if(mimesignature.contains("WPL"))
+            mimecategory = "HTML";
+        else
+            mimecategory = "Video";
+    else if(geniconstr.contains("image")) // Image
+        mimecategory = "Image";
+    else if(geniconstr.contains("package")) // Archive
+        mimecategory = "Archive";
+    else if(geniconstr.contains("font")) // Font
+        mimecategory = "Font";
+    else if(geniconstr.contains("text")) // Text
+        if(mimesignature.contains("email") || mimesignature.contains("mail") || mimesignature.contains("reference to remote file"))
+            mimecategory = "Email";
+        else if(mimesignature.contains("html", Qt::CaseInsensitive))
+            mimecategory = "HTML";
+        else
+            mimecategory = "Text";
+    else if(geniconstr.contains("audio")) // Audio
+        mimecategory = "Audio";
+    else if(geniconstr.contains("spreadsheet")) // Office Spreadsheet
+        mimecategory = "Spreadsheet";
+    else if(geniconstr.contains("presentation")) // Office Presentation
+        mimecategory = "Presentation";
+    else if(geniconstr.contains("multipart")) // MultiPart
+        mimecategory = "MultiPart";
+    else if(geniconstr.contains("inode")) // Inode
+        mimecategory = "Inode";
+    else if(geniconstr.contains("model")) // Binary
+        mimecategory = "Binary";
+    else if(geniconstr.contains("application-x")) // Try iconName() database, java, document, text, image, executable, certificate, bytecode, library, Data, Trash, zerosize, 
+    {
+       if(mimesignature.contains("certificate") || mimesignature.contains("private key") || mimesignature.contains("keystore")) 
+            mimecategory = "Certificate";
+       else if(mimesignature.contains("Metafile") || mimesignature.contains("profile"))
+            mimecategory = "Metafile";
+       else if(mimesignature.contains("video"))
+           mimecategory = "Video";
+       else if(mimesignature.contains("TNEF message") || mimesignature.contains("email"))
+           mimecategory = "Email";
+       else if(mimesignature.contains("Microsoft Word Document") || mimesignature.contains("OpenDocument Master Document Template") || mimesignature.contains("MIF"))
+           mimecategory = "Document";
+       else if(mimesignature.contains("ROM") || mimesignature.contains("Atari") || mimesignature.contains("Thomson"))
+           mimecategory = "ROM";
+       else if(mimesignature.contains("database") || mimesignature.contains("Database") || mimesignature.contains("SQL"))
+           mimecategory = "Database";
+       else if(mimesignature.contains("filesystem") || mimesignature.contains("disk image") || mimesignature.contains("AppImage") || mimesignature.contains("WiiWare"))
+           mimecategory = "Disk Image";
+       else if(mimesignature.contains("executable") || mimesignature.contains("Windows Intaller") || mimesignature.contains("library"))
+           mimecategory = "Executable";
+       else if(mimesignature.contains("Internet shortcut") || mimesignature.contains("backup file") || mimesignature.contains("VBScript") || mimesignature.contains("RDF") || mimesignature.contains("Streaming playlist") || mimesignature.contains("cache file") || mimesignature.contains("Remmina") || mimesignature.contains("GML") || mimesignature.contains("GPX") || mimesignature.contains("MathML") || mimesignature.contains("Metalink") || mimesignature.contains("XML") || mimesignature.contains("RDF") || mimesignature.contains("KML") || mimesignature.contains("FictionBook") || mimesignature.contains("NewzBin"))
+           mimecategory = "Text";
+       else if(mimesignature.contains("Windows animated cursor"))
+           mimecategory = "Image";
+       else if(mimesignature.contains("SPSS") || mimesignature.contains("MHTML"))
+           mimecategory = "Archive";
+       else if(mimesignature.contains("empty"))
+           mimecategory = "Empty File";
+       else
+           mimecategory = "Binary";
+    }
+    else if(geniconstr.contains("x-content-x-generic")) 
+    {
+        if(mimesignature.contains("audio"))
+            mimecategory = "Audio";
+        else if(mimesignature.contains("blank"))
+            mimecategory = "Disk Image";
+        else if(mimesignature.contains("e-book"))
+            mimecategory = "Document";
+        else if(mimesignature.contains("photos") || mimesignature.contains("Picture"))
+            mimecategory = "Image";
+        else if(mimesignature.contains("software"))
+            mimecategory = "Executable";
+        else if(mimesignature.contains("video") || mimesignature.contains("Video"))
+            mimecategory = "Video";
+    }
+    //if(orphanlist->at(j).value("itemtype").toUInt() == 2)
+    //    mimestr = "Directory/Directory";
+		    //else if(sigbuf.left(4) == "FILE")
+			//mimestr = "Windows System/MFT File Entry";
+    if(mimestr.isEmpty())
+        return QString(mimecategory + "/" + mimesignature);
+    else
+        return mimestr;
+    // END OLD CODE NOT IN USE
 }
-*/
-
-/* c++ EXAMPLE TO GET MNTPT AND COMPARE TO PROVIDED PATH STRING
- * CAN MODIFY THIS TO USE STRING.CONTAINS RATHER THAN ==
-
-#include <string_view>
-#include <fstream>
-#include <optional>
-
-std::optional<std::string> get_device_of_mount_point(std::string_view path)
-{
-   std::ifstream mounts{"/proc/mounts"};
-   std::string mountPoint;
-   std::string device;
-
-   while (mounts >> device >> mountPoint)
-   {
-      if (mountPoint == path)
-      {
-         return device;
-      }
-   }
-
-   return std::nullopt;
-}
-if (const auto device = get_device_of_mount_point("/"))
-   std::cout << *device << "\n";
-else
-   std::cout << "Not found\n";
-
-*/
+ */ 
 
 int main(int argc, char* argv[])
 {
@@ -1118,6 +1010,7 @@ int main(int argc, char* argv[])
     uint8_t ishash = 0;
     uint8_t isoutput = 0;
     uint8_t iswithslack = 0;
+    uint8_t issignature = 0;
 
     std::string outfile = "";
 
@@ -1137,7 +1030,7 @@ int main(int argc, char* argv[])
     }
 
     int i;
-    while((i=getopt(argc, argv, "cho:rwV")) != -1)
+    while((i=getopt(argc, argv, "cho:rswV")) != -1)
     {
         switch(i)
         {
@@ -1148,15 +1041,19 @@ int main(int argc, char* argv[])
                 ShowUsage(1);
                 return 1;
 	    case 'c':
-                ishash = 0;
-		printf("Calculate hash and store in logical image.\n");
-		break;
-	    case 'r':
-		isrecursive = 1;
+                ishash = 1;
+		printf("Calculate hash and display here.\n");
 		break;
             case 'o':
                 isoutput = 1;
                 outfile = optarg;
+                break;
+	    case 'r':
+		isrecursive = 1;
+		break;
+            case 's':
+                issignature = 1;
+                printf("Get File Signature and display here.\n");
                 break;
             case 'w':
                 iswithslack = 1;
