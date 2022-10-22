@@ -1,6 +1,5 @@
 #include "common.h"
 
-
 struct ntfsinfo
 {
     uint16_t bytespersector = 0;
@@ -8,17 +7,7 @@ struct ntfsinfo
     uint8_t mftentrysize = 0;
     uint64_t mftstartingcluster = 0;
     uint64_t maxmftentrycount = 0;
-    //std::string mftlayout = "";
 };
-/*
-std::string ConvertDosTimeToHuman(uint16_t* dosdate, uint16_t* dostime);
-std::string ConvertExFatTimeToHuman(uint16_t* dosdate, uint16_t* dostime, uint8_t* timezone);
-void GetNextCluster(std::ifstream* rawcontent, uint32_t clusternum, fatinfo* curfat, std::vector<uint32_t>* clusterlist);
-std::string ConvertClustersToExtents(std::vector<uint32_t>* clusterlist, fatinfo* curfat);
-std::string ParseFatPath(std::ifstream* rawcontent, fatinfo* curfat, std::string childpath);
-std::string ParseFatFile(std::ifstream* rawcontent, fatinfo* curfat, std::string childfile);
-
-*/
 
 std::string ConvertNtfsTimeToHuman(uint64_t ntfstime);
 
