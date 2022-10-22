@@ -5,8 +5,8 @@ The tool will make use of blake3 to provide hashing of file content, the ability
 This tool will be the basis for the implementation of wombatlogical imaging tool, so wombatlogical will be on hold while I develop this.
 
 ## Current File Systems In Progress
-* NTFS
 * EXT2, EXT3, EXT4
 
 ## Current File Systems Implemented
 * FAT12, FAT16, FAT32, EXFAT
+* NTFS
