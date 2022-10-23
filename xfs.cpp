@@ -287,6 +287,14 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     rootinode = __builtin_bswap64(rootinode);
     cursb->rootinode = rootinode;
     std::cout << "Root Inode 0x" << std::hex << rootinode << std::dec << " " << rootinode << std::endl;
+    // DIRECTORY BLOCK LOG (used in directory block size)
+    uint8_t* dbl = new uint8_t[1];
+    uint8_t directoryblocklog = 0;
+    ReadContent(rawcontent, dbl, 190, 1);
+    directoryblocklog = (uint8_t)dbl[0];
+    delete[] dbl;
+    cursb->directoryblocklog = directoryblocklog;
+    std::cout << "Directory Block Log: " << (int)directoryblocklog << std::endl;
 }
 
 uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string childpath)

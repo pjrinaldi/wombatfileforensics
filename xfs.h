@@ -8,17 +8,7 @@ struct xfssuperblockinfo
     uint32_t allocationgroupblocks;
     uint32_t allocationgroupcount;
     uint64_t rootinode;
-    /*
-    uint32_t inodesperblockgroup;
-    uint32_t cflags;
-    uint32_t icflags;
-    uint32_t roflags;
-    uint8_t extversion;
-    float revision;
-    uint32_t fsblockcount;
-    uint32_t blockspergroup;
-    uint32_t blockgroupcount;
-    */
+    uint8_t directoryblocklog;
 };
 
 /*
