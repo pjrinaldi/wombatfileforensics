@@ -12,6 +12,7 @@
 #include "extfs.h"
 #include "fatfs.h"
 #include "ntfs.h"
+#include "xfs.h"
 
 void ShowUsage(int outtype)
 {
@@ -460,25 +461,6 @@ void DetermineFileSystem(std::string devicestring, int* fstype)
                 out << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 1476 + i*8, 4))) << ",";
         }
         out << "|Block count for each extent for startup file." << Qt::endl;
-    }
-    else if(xfssig == "XFSB") // XFS
-    {
-	qInfo() << "XFS File System Found. Parsing...";
-        out << "File System Type Int|9|Internal File System Type represented as an integer." << Qt::endl;
-        out << "File System Type|XFS|File System Type String." << Qt::endl;
-        partitionname += QString::fromStdString(curimg->ReadContent(curstartsector*512 + 108, 12).toStdString());
-        out << "Volume Label|" << partitionname << "|Volume Label for the file system." << Qt::endl;
-        partitionname += " [XFS]";
-        out << "Block Size|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 4, 4))) << "|Size of block in bytes." << Qt::endl;
-        out << "Data Blocks|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 8, 8))) << "|Total number of blocks available for data." << Qt::endl;
-        out << "Real Time Blocks|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 16, 8))) << "|Number of blocks in the real time device." << Qt::endl;
-        out << "Real Time Extents|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 24, 8))) << "|Number of extents on the real time device." << Qt::endl;
-        out << "UUID|" << QString::fromStdString(curimg->ReadContent(curstartsector*512 + 32, 16).toStdString()) << "Universal unique id for the file system." << Qt::endl;
-        out << "Root Inode|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 56, 8))) << "|Root inode number for the filesystem." << Qt::endl;
-        out << "Allocation Group Blocks|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 84, 4))) << "|Size of each allocation group in blocks." << Qt::endl;
-        out << "Allocation Group Count|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 88, 4))) << "|Number of allocation groups in the filesystem." << Qt::endl;
-        out << "Inode Size|" << QString::number(qFromBigEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 104, 2))) << "|Size of an inode in bytes." << Qt::endl;
-        out << "Inodes Per Block|" << QString::number(qFromBigEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 106, 2))) << "|Number of inodes per block." << Qt::endl;
     }
     else if(btrsig == "_BHRfS_M") // BTRFS
     {
@@ -1150,7 +1132,8 @@ int main(int argc, char* argv[])
                 std::cout << "HFSX\n";
                 break;
             case 9:
-                std::cout << "XFS\n";
+                //std::cout << "XFS\n";
+                ParseXfsForensics(filename, mntptstr, devicestr);
                 break;
             case 10:
                 std::cout << "BTRFS\n";

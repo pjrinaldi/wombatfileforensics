@@ -230,8 +230,45 @@ std::string ConvertBlocksToExtents(std::vector<uint32_t>* blocklist, uint32_t bl
 
     return extentstr;
 }
+*/
 
+void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
+{
+    /*
+    uint32_t blocksize;
+    uint16_t inodesize;
+    uint16_t inodesperblock;
+    uint32_t allocationgroupblocks;
+    uint32_t allocationgroupcount;
+    uint64_t rootinode;
+    */
+/*
+        out << "Block Size|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 4, 4))) << "|Size of block in bytes." << Qt::endl;
+        out << "Data Blocks|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 8, 8))) << "|Total number of blocks available for data." << Qt::endl;
+        out << "Real Time Blocks|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 16, 8))) << "|Number of blocks in the real time device." << Qt::endl;
+        out << "Real Time Extents|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 24, 8))) << "|Number of extents on the real time device." << Qt::endl;
+        out << "UUID|" << QString::fromStdString(curimg->ReadContent(curstartsector*512 + 32, 16).toStdString()) << "Universal unique id for the file system." << Qt::endl;
+        out << "Root Inode|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 56, 8))) << "|Root inode number for the filesystem." << Qt::endl;
+        out << "Allocation Group Blocks|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 84, 4))) << "|Size of each allocation group in blocks." << Qt::endl;
+        out << "Allocation Group Count|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 88, 4))) << "|Number of allocation groups in the filesystem." << Qt::endl;
+        out << "Inode Size|" << QString::number(qFromBigEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 104, 2))) << "|Size of an inode in bytes." << Qt::endl;
+        out << "Inodes Per Block|" << QString::number(qFromBigEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 106, 2))) << "|Number of inodes per block." << Qt::endl;
+ */ 
+}
+/*
+ * Allocation Group (ag) Layout
+ * superblock               - 1 sector 512 bytes
+ * ag free block info       - 1 sector 512 bytes
+ * ag inode b+tree info     - 1 sector 512 bytes
+ * ag internal free list    - 1 sector 512 bytes
+ * root of inode b+tree     - 1 blocks blksz bytes
+ * root free space b+tree   - 1 blocks blksz bytes
+ * free list                - 4 blocks blksz bytes
+ * inodes (64)              - 64 * inodesize bytes
+ * remaining space meta/data - rest up to agblocks * blocksize
+*/
 
+/*
 void ParseSuperBlock(std::ifstream* rawcontent, sbinfo* cursb)
 {
     uint64_t sboff = 1024; // start of superblock
@@ -696,15 +733,16 @@ std::string ParseExtFile(std::ifstream* rawcontent, sbinfo* cursb, uint64_t curi
 
     return extforensics;
 }
+*/
 
-void ParseExtForensics(std::string filename, std::string mntptstr, std::string devicestr)
+void ParseXfsForensics(std::string filename, std::string mntptstr, std::string devicestr)
 {
     std::ifstream devicebuffer(devicestr.c_str(), std::ios::in|std::ios::binary);
     //std::cout << filename << " || " << mntptstr << " || " << devicestr << std::endl;
     std::cout << std::endl << "Forensics Artifacts for Mounted File: " << filename << std::endl;
     std::cout << "Mounted File Mount Point: " << mntptstr << std::endl;
     std::cout << "Mounted File Device: " << devicestr << std::endl;
-    sbinfo cursb;
+    xfssuperblockinfo cursb;
     ParseSuperBlock(&devicebuffer, &cursb);
     // NEED TO DETERMINE STARINT DIRECTORY BASED ON MOUNT POINT AND FILENAME
     std::string pathstring = "";
@@ -725,6 +763,14 @@ void ParseExtForensics(std::string filename, std::string mntptstr, std::string d
         pathvector.push_back(s);
 
     //std::cout << "path vector size: " << pathvector.size() << std::endl;
+
+    
+    devicebuffer.close();
+}
+
+/*
+void ParseExtForensics(std::string filename, std::string mntptstr, std::string devicestr)
+{
     // PARSE ROOT DIRECTORY AND GET INODE FOR THE NEXT DIRECTORY IN PATH VECTOR
     uint32_t returninode = 0;
     returninode = ParseExtPath(&devicebuffer, &cursb, 2, pathvector.at(1));
@@ -743,6 +789,5 @@ void ParseExtForensics(std::string filename, std::string mntptstr, std::string d
     std::string extforensics = ParseExtFile(&devicebuffer, &cursb, returninode, pathvector.at(pathvector.size() - 1));
     std::cout << extforensics << std::endl;
 
-    devicebuffer.close();
 }
 */
