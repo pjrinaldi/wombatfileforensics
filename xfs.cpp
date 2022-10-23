@@ -235,6 +235,11 @@ std::string ConvertBlocksToExtents(std::vector<uint32_t>* blocklist, uint32_t bl
 void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
 {
     /*
+    uint16_t __builtin_bswap_16(uint16_t x);
+    uint32_t bswap_32(uint32_t x);
+    uint64_t bswap_64(uint64_t x);
+     */ 
+    /*
     uint32_t blocksize;
     uint16_t inodesize;
     uint16_t inodesperblock;
