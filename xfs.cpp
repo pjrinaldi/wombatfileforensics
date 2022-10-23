@@ -303,7 +303,117 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
     // INODE OFFSET
     uint64_t inodeoffset = (curinode / cursb->inodesperblock) * cursb->blocksize;
     std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
+    // INODE MODE
+    uint8_t* im = new uint8_t[2];
+    uint16_t inodemode = 0;
+    ReadContent(rawcontent, im, inodeoffset + 2, 2);
+    ReturnUint16(&inodemode, im);
+    delete[] im;
+    inodemode = __builtin_bswap16(inodemode);
+    std::cout << "Inode Mode: " << inodemode << std::endl;
+    // INODE VERSION
+    int8_t* iv = new int8_t[1];
+    int8_t inodeversion = 0;
+    ReadContent(rawcontent, iv, inodeoffset + 4, 1);
+    inodeversion = (int8_t)iv[0];
+    delete[] iv;
+    std::cout << "inode version: " << (int)inodeversion << std::endl;
+    // INODE FORMAT
+    int8_t* ifmt = new int8_t[1];
+    int8_t inodeformat = 0;
+    ReadContent(rawcontent, ifmt, inodeoffset + 5, 1);
+    inodeformat = (int8_t)ifmt[0];
+    delete[] ifmt;
+    std::cout << "Inode Format: " << (int)inodeformat << std::endl;
+    // DIRECTORY ENTRY SIZE
+    int8_t* des = new int8_t[8];
+    int64_t directoryentrysize = 0;
+    ReadContent(rawcontent, des, inodeoffset + 56, 8);
+    ReturnInt(&directoryentrysize, des, 8);
+    delete[] des;
+    directoryentrysize = __builtin_bswap64(directoryentrysize);
+    std::cout << "Directory Entry Size: " << directoryentrysize << std::endl;
+    // NUMBER OF BLOCKS FOR INODE's DATA
+    uint8_t* idbc = new uint8_t[8];
+    uint64_t inodedatablockcount = 0;
+    ReadContent(rawcontent, idbc, inodeoffset + 72, 8);
+    ReturnUint64(&inodedatablockcount, idbc);
+    delete[] idbc;
+    inodedatablockcount = __builtin_bswap64(inodedatablockcount);
+    std::cout << "inode data block count: " << inodedatablockcount << std::endl;
+    uint64_t inodedataoffset = inodeoffset;
+    if(inodeversion == 3)
+        inodedataoffset += 176;
+    else
+        inodedataoffset += 100;
+    std::cout << "inode offset to directory data: " << inodedataoffset << std::endl;
+    /*
+    // INODE FORK OFFSET - (DATA OFFSET LENGTH = INODE FORK OFFSET - INODEDATAOFFSET)
+    uint8_t* ifo = new uint8_t[1];
+    uint8_t inodeforkoffset = 0;
+    ReadContent(rawcontent, ifo, inodeoffset + 86, 1);
+    inodeforkoffset = (uint8_t)ifo[0];
+    delete[] ifo;
+    std::cout << "inode fork offset: " << (unsigned int)inodeforkoffset << std::endl;
+    std::cout << "data length: " << inodeforkoffset - (int)inodedataoffset << std::endl;
+    */
+    if(inodeformat & 0x01)
+        std::cout << "local" << std::endl;
+    if(inodeformat & 0x02)
+        std::cout << "extents" << std::endl;
+    if(inodeformat & 0x03)
+        std::cout << "btree" << std::endl;
+    if(inodemode & 0x4000)
+        std::cout << "Directory" << std::endl;
+    /*  if(format & 1)
+        {
+            fmt += 1;
+            qDebug() << "local";
+        }
+        if(format & 2)
+        {
+            fmt += 2;
+            qDebug() << "extents";
+        }
+        if(format & 3)
+        {
+            fmt += 4;
+            qDebug() << "btree";
+        }
+        if(format & 4)
+        {
+            fmt += 8;
+            qDebug() << "uuid";
+        }
+        if(format & 5)
+        {
+            fmt += 16;
+            qDebug() << "reverse mapping b+tree rooted in the fork.";
+        }
 
+            else if(mode & 0x4000) // directory
+            uint64_t dataforkoff = rootinodeoff + 176;
+     *      if(fmt == 21) // local,btree,reversemap - short form directory, xfs_dir2_sf_t
+            {
+                uint8_t entrycount = qFromBigEndian<uint8_t>(curimg->ReadContent(dataforkoff, 1));
+                uint8_t entry64cnt = qFromBigEndian<uint8_t>(curimg->ReadContent(dataforkoff + 1, 1));
+                uint32_t parinode = qFromBigEndian<uint32_t>(curimg->ReadContent(dataforkoff + 2, 4));
+                uint8_t curoff = 6;
+                while(curoff < filesize)
+                {
+                    qDebug() << "curoff:" << curoff;
+                    uint8_t namelen = qFromBigEndian<uint8_t>(curimg->ReadContent(dataforkoff + curoff, 1));
+                    uint16_t entryoff = qFromBigEndian<uint16_t>(curimg->ReadContent(dataforkoff + curoff + 1, 2));
+                    QString entryname = QString::fromStdString(curimg->ReadContent(dataforkoff + curoff + 3, namelen).toStdString());
+                    uint8_t ftype = qFromBigEndian<uint8_t>(curimg->ReadContent(dataforkoff + curoff + 3 + namelen, 1)); // 1-file,2-dir,
+                    uint32_t entryinode = qFromBigEndian<uint32_t>(curimg->ReadContent(dataforkoff + curoff + 4 + namelen, 4));
+                    qDebug() << "name|type|inode:" << entryname << ftype << entryinode;
+		    qDebug() << "entry inode offset:" << curstartsector*512 + (entryinode / inodesperblock) * blocksize;
+                    curoff = curoff + 8 + namelen;
+		    ParseInode(curimg, curstartsector, ptreecnt, blocksize, inodesize, inodesperblock, entryinode, parinode, "");
+                }
+            }
+     */ 
     return childinode;
 }
 /*
