@@ -253,28 +253,28 @@ std::string GetStandardInformationAttribute(std::ifstream* rawcontent, ntfsinfo*
                 uint8_t* cd = new uint8_t[8];
 		uint64_t createdate = 0;
 		ReadContent(rawcontent, cd, mftentryoffset + curoffset + contentoffset, 8);
-		ReturnUint(&createdate, cd, 8);
+		ReturnUint64(&createdate, cd);
 		delete[] cd;
 		siforensics += "Create Date|" + ConvertNtfsTimeToHuman(createdate) + "\n";
                 // MODIFY DATE
 		uint8_t* md = new uint8_t[8];
 		uint64_t modifydate = 0;
 		ReadContent(rawcontent, md, mftentryoffset + curoffset + contentoffset + 8, 8);
-		ReturnUint(&modifydate, md, 8);
+		ReturnUint64(&modifydate, md);
 		delete[] md;
 		siforensics += "Modify Date|" + ConvertNtfsTimeToHuman(modifydate) + "\n";
                 // STATUS DATE
                 uint8_t* sd = new uint8_t[8];
                 uint64_t statusdate = 0;
                 ReadContent(rawcontent, sd, mftentryoffset + curoffset + contentoffset + 16, 8);
-                ReturnUint(&statusdate, sd, 8);
+                ReturnUint64(&statusdate, sd);
                 delete[] sd;
                 siforensics += "Status Date|" + ConvertNtfsTimeToHuman(statusdate) + "\n";
                 // ACCESS DATE
                 uint8_t* ad = new uint8_t[8];
                 uint64_t accessdate = 0;
                 ReadContent(rawcontent, ad, mftentryoffset + curoffset + contentoffset + 24, 8);
-                ReturnUint(&accessdate, ad, 8);
+                ReturnUint64(&accessdate, ad);
                 delete[] ad;
                 siforensics += "Access Date|" + ConvertNtfsTimeToHuman(accessdate) + "\n";
                 // OWNER ID
@@ -401,28 +401,28 @@ std::string GetFileNameAttribute(std::ifstream* rawcontent, ntfsinfo* curnt, uin
                 uint8_t* cd = new uint8_t[8];
 		uint64_t createdate = 0;
 		ReadContent(rawcontent, cd, mftentryoffset + curoffset + contentoffset + 8, 8);
-		ReturnUint(&createdate, cd, 8);
+		ReturnUint64(&createdate, cd);
 		delete[] cd;
 		fnforensics += "Create Date|" + ConvertNtfsTimeToHuman(createdate) + "\n";
                 // MODIFY DATE
                 uint8_t* md = new uint8_t[8];
 		uint64_t modifydate = 0;
 		ReadContent(rawcontent, md, mftentryoffset + curoffset + contentoffset + 16, 8);
-		ReturnUint(&modifydate, md, 8);
+		ReturnUint64(&modifydate, md);
 		delete[] md;
 		fnforensics += "Modify Date|" + ConvertNtfsTimeToHuman(modifydate) + "\n";
                 // STATUS DATE
                 uint8_t* sd = new uint8_t[8];
 		uint64_t statusdate = 0;
 		ReadContent(rawcontent, sd, mftentryoffset + curoffset + contentoffset + 24, 8);
-		ReturnUint(&statusdate, sd, 8);
+		ReturnUint64(&statusdate, sd);
 		delete[] sd;
 		fnforensics += "Status Date|" + ConvertNtfsTimeToHuman(statusdate) + "\n";
                 // ACCESS DATE
                 uint8_t* ad = new uint8_t[8];
 		uint64_t accessdate = 0;
 		ReadContent(rawcontent, ad, mftentryoffset + curoffset + contentoffset + 32, 8);
-		ReturnUint(&accessdate, ad, 8);
+		ReturnUint64(&accessdate, ad);
 		delete[] ad;
 		fnforensics += "Access Date|" + ConvertNtfsTimeToHuman(accessdate) + "\n";
                 // FILE NAMESPACE

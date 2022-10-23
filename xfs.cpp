@@ -234,31 +234,66 @@ std::string ConvertBlocksToExtents(std::vector<uint32_t>* blocklist, uint32_t bl
 
 void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
 {
-    /*
-    uint16_t __builtin_bswap_16(uint16_t x);
-    uint32_t bswap_32(uint32_t x);
-    uint64_t bswap_64(uint64_t x);
-     */ 
-    /*
-    uint32_t blocksize;
-    uint16_t inodesize;
-    uint16_t inodesperblock;
-    uint32_t allocationgroupblocks;
-    uint32_t allocationgroupcount;
-    uint64_t rootinode;
-    */
-/*
-        out << "Block Size|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 4, 4))) << "|Size of block in bytes." << Qt::endl;
-        out << "Data Blocks|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 8, 8))) << "|Total number of blocks available for data." << Qt::endl;
-        out << "Real Time Blocks|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 16, 8))) << "|Number of blocks in the real time device." << Qt::endl;
-        out << "Real Time Extents|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 24, 8))) << "|Number of extents on the real time device." << Qt::endl;
-        out << "UUID|" << QString::fromStdString(curimg->ReadContent(curstartsector*512 + 32, 16).toStdString()) << "Universal unique id for the file system." << Qt::endl;
-        out << "Root Inode|" << QString::number(qFromBigEndian<quint64>(curimg->ReadContent(curstartsector*512 + 56, 8))) << "|Root inode number for the filesystem." << Qt::endl;
-        out << "Allocation Group Blocks|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 84, 4))) << "|Size of each allocation group in blocks." << Qt::endl;
-        out << "Allocation Group Count|" << QString::number(qFromBigEndian<uint32_t>(curimg->ReadContent(curstartsector*512 + 88, 4))) << "|Number of allocation groups in the filesystem." << Qt::endl;
-        out << "Inode Size|" << QString::number(qFromBigEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 104, 2))) << "|Size of an inode in bytes." << Qt::endl;
-        out << "Inodes Per Block|" << QString::number(qFromBigEndian<uint16_t>(curimg->ReadContent(curstartsector*512 + 106, 2))) << "|Number of inodes per block." << Qt::endl;
- */ 
+    // BLOCK SIZE
+    uint8_t* bs = new uint8_t[4];
+    uint32_t blocksize = 0;
+    ReadContent(rawcontent, bs, 4, 4);
+    ReturnUint32(&blocksize, bs);
+    delete[] bs;
+    blocksize = __builtin_bswap32(blocksize); 
+    cursb->blocksize = blocksize;
+    std::cout << "Block Size: " << blocksize << std::endl;
+    // INODE SIZE
+    uint8_t* is = new uint8_t[2];
+    uint16_t inodesize = 0;
+    ReadContent(rawcontent, is, 104, 2);
+    ReturnUint16(&inodesize, is);
+    delete[] is;
+    inodesize = __builtin_bswap16(inodesize);
+    cursb->inodesize = inodesize;
+    std::cout << "Inode Size: " << inodesize << std::endl;
+    // INODES PER BLOCK
+    uint8_t* ipb = new uint8_t[2];
+    uint16_t inodesperblock = 0;
+    ReadContent(rawcontent, ipb, 106, 2);
+    ReturnUint16(&inodesperblock, ipb);
+    delete[] ipb;
+    inodesperblock = __builtin_bswap16(inodesperblock);
+    cursb->inodesperblock = inodesperblock;
+    std::cout << "Inodes Per Block: " << inodesperblock << std::endl;
+    // ALLOCATION GROUP BLOCKS
+    uint8_t* agb = new uint8_t[4];
+    uint32_t allocationgroupblocks = 0;
+    ReadContent(rawcontent, agb, 84, 4);
+    ReturnUint32(&allocationgroupblocks, agb);
+    delete[] agb;
+    allocationgroupblocks = __builtin_bswap32(allocationgroupblocks);
+    cursb->allocationgroupblocks = allocationgroupblocks;
+    std::cout << "Allocation Group Blocks: " << allocationgroupblocks << std::endl;
+    // ALLOCATION GROUP COUNT
+    uint8_t* agc = new uint8_t[4];
+    uint32_t allocationgroupcount = 0;
+    ReadContent(rawcontent, agc, 88, 4);
+    ReturnUint32(&allocationgroupcount, agc);
+    delete[] agc;
+    allocationgroupcount = __builtin_bswap32(allocationgroupcount);
+    cursb->allocationgroupcount = allocationgroupcount;
+    std::cout << "Allocation Group Count: " << allocationgroupcount << std::endl;
+    // ROOT INODE
+    uint8_t* ri = new uint8_t[8];
+    uint64_t rootinode = 0;
+    ReadContent(rawcontent, ri, 56, 8);
+    ReturnUint64(&rootinode, ri);
+    rootinode = __builtin_bswap64(rootinode);
+    cursb->rootinode = rootinode;
+    std::cout << "Root Inode 0x" << std::hex << rootinode << std::dec << " " << rootinode << std::endl;
+}
+
+uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string childpath)
+{
+    uint64_t childinode = 0;
+
+    return childinode;
 }
 /*
  * Allocation Group (ag) Layout
@@ -767,32 +802,21 @@ void ParseXfsForensics(std::string filename, std::string mntptstr, std::string d
     while(getline(iss, s, '/'))
         pathvector.push_back(s);
 
-    //std::cout << "path vector size: " << pathvector.size() << std::endl;
-
+    uint64_t childinode = 0;
+    std::cout << "path vector size: " << pathvector.size() << std::endl;
+    if(pathvector.size() > 1)
+    {
+        childinode = ParseXfsPath(&devicebuffer, &cursb, cursb.rootinode, pathvector.at(1)); // parse root directory
+        std::cout << "Child Inode to use for child path file: " << childinode << std::endl;
+        for(int i=1; i < pathvector.size() - 2; i++)
+        {
+            childinode = ParseXfsPath(&devicebuffer, &cursb, childinode, pathvector.at(i+1));
+            std::cout << "Child Inode to use for child path/file: " << childinode << std::endl;
+        }
+    }
+    std::cout << "now to parse xfs file: " << pathvector.at(pathvector.size() - 1) << std::endl;
+    //std::string xfsforensics = ParseXfsFile(&devicebuffer, &cursb, &childinode, pathvector.at(pathvector.size() - 1));
+    //std::cout << xfsforensics;
     
     devicebuffer.close();
 }
-
-/*
-void ParseExtForensics(std::string filename, std::string mntptstr, std::string devicestr)
-{
-    // PARSE ROOT DIRECTORY AND GET INODE FOR THE NEXT DIRECTORY IN PATH VECTOR
-    uint32_t returninode = 0;
-    returninode = ParseExtPath(&devicebuffer, &cursb, 2, pathvector.at(1));
-
-    //std::cout << "Inode for " << pathvector.at(1) << ": " << returninode << std::endl;
-    //std::cout << "Loop Over the Remaining Paths\n";
-    if(pathvector.size() > 0)
-    {
-        for(int i=1; i < pathvector.size() - 2; i++)
-        {
-            returninode = ParseExtPath(&devicebuffer, &cursb, returninode, pathvector.at(i));
-            //std::cout << "Inode for " << pathvector.at(i) << ": " << returninode << std::endl;
-            //std::cout << "i: " << i << " Next Directory to Parse: " << pathvector.at(i+1) << std::endl;
-        }
-    } 
-    std::string extforensics = ParseExtFile(&devicebuffer, &cursb, returninode, pathvector.at(pathvector.size() - 1));
-    std::cout << extforensics << std::endl;
-
-}
-*/

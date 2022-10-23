@@ -30,5 +30,6 @@ uint64_t ParseExtPath(std::ifstream* devicebuffer, sbinfo* cursb, uint64_t curin
 std::string ParseExtFile(std::ifstream* rawcontent, sbinfo* cursb, uint64_t curinode, std::string filename);
 */
 
+uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string childpath);
 void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb);
 void ParseXfsForensics(std::string filename, std::string mntptstr, std::string devicestr);
