@@ -292,6 +292,9 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
 uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string childpath)
 {
     uint64_t childinode = 0;
+    // INODE OFFSET
+    uint64_t inodeoffset = (curinode / cursb->inodesperblock) * cursb->blocksize;
+    std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
 
     return childinode;
 }
