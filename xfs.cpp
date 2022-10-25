@@ -363,8 +363,89 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
         std::cout << "extents" << std::endl;
     if(inodeformat & 0x03)
         std::cout << "btree" << std::endl;
+    if(inodeformat & 0x05)
+        std::cout << "reverse mapping b+tree rooted in the fork." << std::endl;
     if(inodemode & 0x4000)
         std::cout << "Directory" << std::endl;
+    uint16_t curoffset = 0;
+    if(inodeformat & 0x01) // local xfs_dir2_sf
+    {
+        // ENTRY COUNT
+        uint8_t* ec = new uint8_t[1];
+        uint8_t entrycount = 0;
+        ReadContent(rawcontent, ec, inodedataoffset, 1);
+        entrycount = (uint8_t)ec[0];
+        delete[] ec;
+        std::cout << "entry count: " << (int)entrycount << std::endl;
+        // I8COUNT
+        uint8_t* i8c = new uint8_t[1];
+        uint8_t i8count = 0;
+        ReadContent(rawcontent, i8c, inodedataoffset + 1, 1);
+        i8count = (uint8_t)i8c[0];
+        delete[] i8c;
+        std::cout << "i8count: " << (int)i8count << std::endl;
+        // PARENT INODE
+        uint64_t parentinode = 0;
+        if(i8count == 0x00)
+        {
+            uint8_t* pi = new uint8_t[4];
+            uint32_t pinode = 0;
+            ReadContent(rawcontent, pi, inodedataoffset + 2, 4);
+            ReturnUint32(&pinode, pi);
+            delete[] pi;
+            parentinode = __builtin_bswap32(pinode);
+            curoffset = 6;
+        }
+        else
+        {
+            uint8_t* pi = new uint8_t[8];
+            ReadContent(rawcontent, pi, inodedataoffset + 2, 8);
+            ReturnUint64(&parentinode, pi);
+            delete[] pi;
+            parentinode = __builtin_bswap64(parentinode);
+            curoffset = 10;
+        }
+        std::cout << "Parent Inode: " << parentinode << std::endl;
+        for(uint8_t i=0; i < entrycount; i++)
+        {
+            // NAME LENGTH
+            uint8_t* nl = new uint8_t[1];
+            uint8_t namelength = 0;
+            ReadContent(rawcontent, nl, inodedataoffset + curoffset, 1);
+            namelength = (uint8_t)nl[0];
+            delete[] nl;
+            std::cout << "Name Length: " << (int)namelength << std::endl;
+            // ENTRY NAME
+            uint8_t* en = new uint8_t[namelength+1];
+            ReadContent(rawcontent, en, inodedataoffset + curoffset + 3, namelength);
+            en[namelength] = '\0';
+            std::string name((char*)en);
+            std::cout << "entry name: " << name << std::endl;
+            // entry inode
+            if(i8count == 0x00)
+            {
+                uint8_t* ei = new uint8_t[4];
+                uint32_t entryinode = 0;
+                ReadContent(rawcontent, ei, inodedataoffset + curoffset + 3 + namelength + 1, 4);
+                ReturnUint32(&entryinode, ei);
+                delete[] ei;
+                childinode = __builtin_bswap32(entryinode);
+                curoffset = curoffset + 3 + namelength + 1 + 4;
+            }
+            else
+            {
+                uint8_t* ei = new uint8_t[8];
+                ReadContent(rawcontent, ei, inodedataoffset + curoffset + 3 + namelength + 1, 8);
+                ReturnUint64(&childinode, ei);
+                childinode = __builtin_bswap64(childinode);
+                delete[] ei;
+                curoffset = curoffset + 3 + namelength + 1 + 8;
+            }
+            std::cout << "Child Inode: " << childinode << std::endl;
+            if(childpath.compare(name) == 0)
+                return childinode;
+        }
+    }
     /*  if(format & 1)
         {
             fmt += 1;
