@@ -7,12 +7,12 @@ This tool will be the basis for the implementation of wombatlogical imaging tool
 ### Current File Systems Implemented
 * FAT12, FAT16, FAT32, EXFAT
 * NTFS
-
-### Current File Systems In Progress
 * EXT2, EXT3, EXT4
 
-### Upcoming File Systems to Implement
+### Current File Systems In Progress
 * XFS
+
+### Upcoming File Systems to Implement
 * HFS+
 * ISO
 * UDF
