@@ -1,7 +1,6 @@
 #include "xfs.h"
 
-/*
-std::string ConvertUnixTimeToHuman(uint32_t unixtime)
+std::string ConvertXfsTimeToHuman(uint32_t unixtime)
 {
     time_t timet = (time_t)unixtime;
     struct tm* tmtime = gmtime(&timet);
@@ -11,6 +10,7 @@ std::string ConvertUnixTimeToHuman(uint32_t unixtime)
     return std::string(hchar);
 }
 
+/*
 void GetContentBlocks(std::ifstream* devicebuffer, uint32_t blocksize, uint64_t curoffset, uint32_t incompatflags, std::vector<uint32_t>* blocklist)
 {
     uint8_t* iflags = new uint8_t[4];
@@ -242,7 +242,7 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     delete[] bs;
     blocksize = __builtin_bswap32(blocksize); 
     cursb->blocksize = blocksize;
-    std::cout << "Block Size: " << blocksize << std::endl;
+    //std::cout << "Block Size: " << blocksize << std::endl;
     // INODE SIZE
     uint8_t* is = new uint8_t[2];
     uint16_t inodesize = 0;
@@ -251,7 +251,7 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     delete[] is;
     inodesize = __builtin_bswap16(inodesize);
     cursb->inodesize = inodesize;
-    std::cout << "Inode Size: " << inodesize << std::endl;
+    //std::cout << "Inode Size: " << inodesize << std::endl;
     // INODES PER BLOCK
     uint8_t* ipb = new uint8_t[2];
     uint16_t inodesperblock = 0;
@@ -260,7 +260,7 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     delete[] ipb;
     inodesperblock = __builtin_bswap16(inodesperblock);
     cursb->inodesperblock = inodesperblock;
-    std::cout << "Inodes Per Block: " << inodesperblock << std::endl;
+    //std::cout << "Inodes Per Block: " << inodesperblock << std::endl;
     // ALLOCATION GROUP BLOCKS
     uint8_t* agb = new uint8_t[4];
     uint32_t allocationgroupblocks = 0;
@@ -269,7 +269,7 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     delete[] agb;
     allocationgroupblocks = __builtin_bswap32(allocationgroupblocks);
     cursb->allocationgroupblocks = allocationgroupblocks;
-    std::cout << "Allocation Group Blocks: " << allocationgroupblocks << std::endl;
+    //std::cout << "Allocation Group Blocks: " << allocationgroupblocks << std::endl;
     // ALLOCATION GROUP COUNT
     uint8_t* agc = new uint8_t[4];
     uint32_t allocationgroupcount = 0;
@@ -278,7 +278,7 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     delete[] agc;
     allocationgroupcount = __builtin_bswap32(allocationgroupcount);
     cursb->allocationgroupcount = allocationgroupcount;
-    std::cout << "Allocation Group Count: " << allocationgroupcount << std::endl;
+    //std::cout << "Allocation Group Count: " << allocationgroupcount << std::endl;
     // ROOT INODE
     uint8_t* ri = new uint8_t[8];
     uint64_t rootinode = 0;
@@ -286,7 +286,7 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     ReturnUint64(&rootinode, ri);
     rootinode = __builtin_bswap64(rootinode);
     cursb->rootinode = rootinode;
-    std::cout << "Root Inode 0x" << std::hex << rootinode << std::dec << " " << rootinode << std::endl;
+    //std::cout << "Root Inode 0x" << std::hex << rootinode << std::dec << " " << rootinode << std::endl;
     // DIRECTORY BLOCK LOG (used in directory block size)
     uint8_t* dbl = new uint8_t[1];
     uint8_t directoryblocklog = 0;
@@ -294,23 +294,18 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     directoryblocklog = (uint8_t)dbl[0];
     delete[] dbl;
     cursb->directoryblocklog = directoryblocklog;
-    std::cout << "Directory Block Log: " << (int)directoryblocklog << std::endl;
+    //std::cout << "Directory Block Log: " << (int)directoryblocklog << std::endl;
 }
 
 std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string filename)
 {
     std::string xfsforensics = "";
-    std::cout << "curinode to parse: " << curinode << " to find the file match: " << filename << std::endl;
-
-    return xfsforensics;
-}
-
-uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string childpath)
-{
-    uint64_t childinode = 0;
+    xfsforensics += "Ext Inode|" + std::to_string(curinode) + "\n";
+    xfsforensics += "Name|" + filename + "\n";
+    //std::cout << "curinode to parse: " << curinode << " to find the file match: " << filename << std::endl;
     // INODE OFFSET
-    uint64_t inodeoffset = (curinode / cursb->inodesperblock) * cursb->blocksize;
-    std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
+    uint64_t inodeoffset = (uint64_t)((float)((float)curinode / (float)cursb->inodesperblock) * cursb->blocksize);
+    //std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
     // INODE MODE
     uint8_t* im = new uint8_t[2];
     uint16_t inodemode = 0;
@@ -318,53 +313,60 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
     ReturnUint16(&inodemode, im);
     delete[] im;
     inodemode = __builtin_bswap16(inodemode);
-    std::cout << "Inode Mode: " << inodemode << std::endl;
+    //std::cout << "Inode Mode: " << inodemode << std::endl;
+    std::string filemodestring = "---------";
+    if(inodemode & 0xc000) // unix socket
+        filemodestring.replace(0, 1, "s");
+    if(inodemode & 0xa000) // symbolic link
+        filemodestring.replace(0, 1, "l");
+    if(inodemode & 0x6000) // block device
+        filemodestring.replace(0, 1, "b");
+    if(inodemode & 0x2000) // char device
+        filemodestring.replace(0, 1, "c");
+    if(inodemode & 0x1000) // FIFO (pipe)
+        filemodestring.replace(0, 1, "p");
+    if(inodemode & 0x8000) // regular file
+    {
+        filemodestring.replace(0, 1, "-");
+    }
+    else if(inodemode & 0x4000) // directory
+    {
+        filemodestring.replace(0, 1, "d");
+    }
+    if(inodemode & 0x100) // user read
+        filemodestring.replace(1, 1, "r");
+    if(inodemode & 0x080) // user write
+        filemodestring.replace(2, 1, "w");
+    if(inodemode & 0x040) // user execute
+        filemodestring.replace(3, 1, "x");
+    if(inodemode & 0x020) // group read
+        filemodestring.replace(4, 1, "r");
+    if(inodemode & 0x010) // group write
+        filemodestring.replace(5, 1, "w");
+    if(inodemode & 0x008) // group execute
+        filemodestring.replace(6, 1, "x");
+    if(inodemode & 0x004) // other read
+        filemodestring.replace(7, 1, "r");
+    if(inodemode & 0x002) // other write
+        filemodestring.replace(8, 1, "w");
+    if(inodemode & 0x001) // other execute
+        filemodestring.replace(9, 1, "x");
+    xfsforensics += "Mode|" + filemodestring + "\n";
+
     // INODE VERSION
     int8_t* iv = new int8_t[1];
     int8_t inodeversion = 0;
     ReadContent(rawcontent, iv, inodeoffset + 4, 1);
     inodeversion = (int8_t)iv[0];
     delete[] iv;
-    std::cout << "inode version: " << (int)inodeversion << std::endl;
+    xfsforensics += "Inode Version|v" + std::to_string((int)inodeversion) + "\n";
+    //std::cout << "inode version: " << (int)inodeversion << std::endl;
     // INODE FORMAT
     int8_t* ifmt = new int8_t[1];
     int8_t inodeformat = 0;
     ReadContent(rawcontent, ifmt, inodeoffset + 5, 1);
     inodeformat = (int8_t)ifmt[0];
     delete[] ifmt;
-    std::cout << "Inode Format: " << (int)inodeformat << std::endl;
-    // DIRECTORY ENTRY SIZE
-    int8_t* des = new int8_t[8];
-    int64_t directoryentrysize = 0;
-    ReadContent(rawcontent, des, inodeoffset + 56, 8);
-    ReturnInt(&directoryentrysize, des, 8);
-    delete[] des;
-    directoryentrysize = __builtin_bswap64(directoryentrysize);
-    std::cout << "Directory Entry Size: " << directoryentrysize << std::endl;
-    // NUMBER OF BLOCKS FOR INODE's DATA
-    uint8_t* idbc = new uint8_t[8];
-    uint64_t inodedatablockcount = 0;
-    ReadContent(rawcontent, idbc, inodeoffset + 72, 8);
-    ReturnUint64(&inodedatablockcount, idbc);
-    delete[] idbc;
-    inodedatablockcount = __builtin_bswap64(inodedatablockcount);
-    std::cout << "inode data block count: " << inodedatablockcount << std::endl;
-    uint64_t inodedataoffset = inodeoffset;
-    if(inodeversion == 3)
-        inodedataoffset += 176;
-    else
-        inodedataoffset += 100;
-    std::cout << "inode offset to directory data: " << inodedataoffset << std::endl;
-    /*
-    // INODE FORK OFFSET - (DATA OFFSET LENGTH = INODE FORK OFFSET - INODEDATAOFFSET)
-    uint8_t* ifo = new uint8_t[1];
-    uint8_t inodeforkoffset = 0;
-    ReadContent(rawcontent, ifo, inodeoffset + 86, 1);
-    inodeforkoffset = (uint8_t)ifo[0];
-    delete[] ifo;
-    std::cout << "inode fork offset: " << (unsigned int)inodeforkoffset << std::endl;
-    std::cout << "data length: " << inodeforkoffset - (int)inodedataoffset << std::endl;
-    */
     if(inodeformat & 0x01)
         std::cout << "local" << std::endl;
     if(inodeformat & 0x02)
@@ -375,6 +377,108 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
         std::cout << "reverse mapping b+tree rooted in the fork." << std::endl;
     if(inodemode & 0x4000)
         std::cout << "Directory" << std::endl;
+    std::cout << "Inode Format: " << (int)inodeformat << std::endl;
+
+    // ACCESS TIME
+    uint8_t* at = new uint8_t[4];
+    uint32_t accesstime = 0;
+    ReadContent(rawcontent, at, inodeoffset + 32, 4);
+    ReturnUint32(&accesstime, at);
+    delete[] at;
+    accesstime = __builtin_bswap32(accesstime);
+    xfsforensics += "Access Date|" + ConvertXfsTimeToHuman(accesstime) + "\n";
+    // MODIFY TIME
+    uint8_t* mt = new uint8_t[4];
+    uint32_t modifytime = 0;
+    ReadContent(rawcontent, mt, inodeoffset + 40, 4);
+    ReturnUint32(&modifytime, mt);
+    delete[] mt;
+    modifytime = __builtin_bswap32(modifytime);
+    xfsforensics += "Modify Date|" + ConvertXfsTimeToHuman(modifytime) + "\n";
+    // CHANGE TIME
+    uint8_t* ct = new uint8_t[4];
+    uint32_t changetime = 0;
+    ReadContent(rawcontent, ct, inodeoffset + 40, 4);
+    ReturnUint32(&changetime, ct);
+    delete[] ct;
+    changetime = __builtin_bswap32(changetime);
+    xfsforensics += "Change Date|" + ConvertXfsTimeToHuman(changetime) + "\n";
+
+    return xfsforensics;
+}
+
+uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string childpath)
+{
+    uint64_t childinode = 0;
+    // INODE OFFSET
+    uint64_t inodeoffset = (uint64_t)((float)((float)curinode / (float)cursb->inodesperblock) * cursb->blocksize);
+    //std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
+    // INODE MODE
+    uint8_t* im = new uint8_t[2];
+    uint16_t inodemode = 0;
+    ReadContent(rawcontent, im, inodeoffset + 2, 2);
+    ReturnUint16(&inodemode, im);
+    delete[] im;
+    inodemode = __builtin_bswap16(inodemode);
+    //std::cout << "Inode Mode: " << inodemode << std::endl;
+    // INODE VERSION
+    int8_t* iv = new int8_t[1];
+    int8_t inodeversion = 0;
+    ReadContent(rawcontent, iv, inodeoffset + 4, 1);
+    inodeversion = (int8_t)iv[0];
+    delete[] iv;
+    //std::cout << "inode version: " << (int)inodeversion << std::endl;
+    // INODE FORMAT
+    int8_t* ifmt = new int8_t[1];
+    int8_t inodeformat = 0;
+    ReadContent(rawcontent, ifmt, inodeoffset + 5, 1);
+    inodeformat = (int8_t)ifmt[0];
+    delete[] ifmt;
+    //std::cout << "Inode Format: " << (int)inodeformat << std::endl;
+    // DIRECTORY ENTRY SIZE
+    int8_t* des = new int8_t[8];
+    int64_t directoryentrysize = 0;
+    ReadContent(rawcontent, des, inodeoffset + 56, 8);
+    ReturnInt(&directoryentrysize, des, 8);
+    delete[] des;
+    directoryentrysize = __builtin_bswap64(directoryentrysize);
+    //std::cout << "Directory Entry Size: " << directoryentrysize << std::endl;
+    // NUMBER OF BLOCKS FOR INODE's DATA
+    uint8_t* idbc = new uint8_t[8];
+    uint64_t inodedatablockcount = 0;
+    ReadContent(rawcontent, idbc, inodeoffset + 72, 8);
+    ReturnUint64(&inodedatablockcount, idbc);
+    delete[] idbc;
+    inodedatablockcount = __builtin_bswap64(inodedatablockcount);
+    //std::cout << "inode data block count: " << inodedatablockcount << std::endl;
+    uint64_t inodedataoffset = inodeoffset;
+    if(inodeversion == 3)
+        inodedataoffset += 176;
+    else
+        inodedataoffset += 100;
+    //std::cout << "inode offset to directory data: " << inodedataoffset << std::endl;
+    /*
+    // INODE FORK OFFSET - (DATA OFFSET LENGTH = INODE FORK OFFSET - INODEDATAOFFSET)
+    uint8_t* ifo = new uint8_t[1];
+    uint8_t inodeforkoffset = 0;
+    ReadContent(rawcontent, ifo, inodeoffset + 86, 1);
+    inodeforkoffset = (uint8_t)ifo[0];
+    delete[] ifo;
+    std::cout << "inode fork offset: " << (unsigned int)inodeforkoffset << std::endl;
+    std::cout << "data length: " << inodeforkoffset - (int)inodedataoffset << std::endl;
+    */
+    /*
+    if(inodeformat & 0x01)
+        std::cout << "local" << std::endl;
+    if(inodeformat & 0x02)
+        std::cout << "extents" << std::endl;
+    if(inodeformat & 0x03)
+        std::cout << "btree" << std::endl;
+    if(inodeformat & 0x05)
+        std::cout << "reverse mapping b+tree rooted in the fork." << std::endl;
+    if(inodemode & 0x4000)
+        std::cout << "Directory" << std::endl;
+    */
     uint16_t curoffset = 0;
     if(inodeformat & 0x01) // SHORT FORM DIRECTORY (local xfs_dir2_sf)
     {
@@ -384,14 +488,14 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
         ReadContent(rawcontent, ec, inodedataoffset, 1);
         entrycount = (uint8_t)ec[0];
         delete[] ec;
-        std::cout << "entry count: " << (int)entrycount << std::endl;
+        //std::cout << "entry count: " << (int)entrycount << std::endl;
         // I8COUNT
         uint8_t* i8c = new uint8_t[1];
         uint8_t i8count = 0;
         ReadContent(rawcontent, i8c, inodedataoffset + 1, 1);
         i8count = (uint8_t)i8c[0];
         delete[] i8c;
-        std::cout << "i8count: " << (int)i8count << std::endl;
+        //std::cout << "i8count: " << (int)i8count << std::endl;
         // PARENT INODE
         uint64_t parentinode = 0;
         if(i8count == 0x00)
@@ -413,7 +517,7 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
             parentinode = __builtin_bswap64(parentinode);
             curoffset = 10;
         }
-        std::cout << "Parent Inode: " << parentinode << std::endl;
+        //std::cout << "Parent Inode: " << parentinode << std::endl;
         for(uint8_t i=0; i < entrycount; i++)
         {
             // NAME LENGTH
@@ -422,13 +526,13 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
             ReadContent(rawcontent, nl, inodedataoffset + curoffset, 1);
             namelength = (uint8_t)nl[0];
             delete[] nl;
-            std::cout << "Name Length: " << (int)namelength << std::endl;
+            //std::cout << "Name Length: " << (int)namelength << std::endl;
             // ENTRY NAME
             uint8_t* en = new uint8_t[namelength+1];
             ReadContent(rawcontent, en, inodedataoffset + curoffset + 3, namelength);
             en[namelength] = '\0';
             std::string name((char*)en);
-            std::cout << "entry name: " << name << std::endl;
+            //std::cout << "entry name: " << name << std::endl;
             // entry inode
             if(i8count == 0x00)
             {
@@ -449,7 +553,7 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
                 delete[] ei;
                 curoffset = curoffset + 3 + namelength + 1 + 8;
             }
-            std::cout << "Child Inode: " << childinode << std::endl;
+            //std::cout << "Child Inode: " << childinode << std::endl;
             if(childpath.compare(name) == 0)
                 return childinode;
         }
@@ -824,40 +928,21 @@ void ParseXfsForensics(std::string filename, std::string mntptstr, std::string d
         pathvector.push_back(s);
 
     uint64_t childinode = 0;
-    std::cout << "path vector size: " << pathvector.size() << std::endl;
-    /*
-    // PARSE ROOT DIRECTORY AND GET INODE FOR THE NEXT DIRECTORY IN PATH VECTOR
-    uint32_t returninode = 0;
-    returninode = ParseExtPath(&devicebuffer, &cursb, 2, pathvector.at(1));
-
-    //std::cout << "Inode for " << pathvector.at(1) << ": " << returninode << std::endl;
-    //std::cout << "Loop Over the Remaining Paths\n";
+    //std::cout << "path vector size: " << pathvector.size() << std::endl;
+    childinode = ParseXfsPath(&devicebuffer, &cursb, cursb.rootinode, pathvector.at(1));
+    //std::cout << "Child Inode to use for child path file: " << childinode << std::endl;
     if(pathvector.size() > 0)
     {
-        for(int i=1; i < pathvector.size() - 2; i++)
+        for(int i=1; i < pathvector.size() - 1; i++)
         {
-            returninode = ParseExtPath(&devicebuffer, &cursb, returninode, pathvector.at(i));
-            //std::cout << "Inode for " << pathvector.at(i) << ": " << returninode << std::endl;
-            //std::cout << "i: " << i << " Next Directory to Parse: " << pathvector.at(i+1) << std::endl;
-        }
-    } 
-    std::string extforensics = ParseExtFile(&devicebuffer, &cursb, returninode, pathvector.at(pathvector.size() - 1));
-    */
-    /*
-    if(pathvector.size() > 1)
-    {
-        childinode = ParseXfsPath(&devicebuffer, &cursb, cursb.rootinode, pathvector.at(1)); // parse root directory
-        std::cout << "Child Inode to use for child path file: " << childinode << std::endl;
-        for(int i=1; i < pathvector.size() - 2; i++)
-        {
+            //std::cout << "inside for loop: " << i << " " << pathvector.at(i+1) << std::endl;
             childinode = ParseXfsPath(&devicebuffer, &cursb, childinode, pathvector.at(i+1));
-            std::cout << "Child Inode to use for child path/file: " << childinode << std::endl;
+            //std::cout << "Child Inode to use for child path file: " << childinode << std::endl;
         }
     }
-    std::cout << "now to parse xfs file: " << pathvector.at(pathvector.size() - 1) << std::endl;
+    //std::cout << "now to parse xfs file: " << pathvector.at(pathvector.size() - 1) << std::endl;
     std::string xfsforensics = ParseXfsFile(&devicebuffer, &cursb, childinode, pathvector.at(pathvector.size() - 1));
     std::cout << xfsforensics;
-    */
     
     devicebuffer.close();
 }
