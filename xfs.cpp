@@ -373,13 +373,13 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
         xfsforensics += "local,";
         //std::cout << "local" << std::endl;
     */
-    if(inodeformat & 0x02)
+    if(inodeformat == 0x02)
         xfsforensics += "extents,";
         //std::cout << "extents" << std::endl;
-    if(inodeformat & 0x03)
+    if(inodeformat == 0x03)
         xfsforensics += "b+tree,";
         //std::cout << "btree" << std::endl;
-    if(inodeformat & 0x05)
+    if(inodeformat == 0x05)
         xfsforensics += "reverse mapped b+tree,";
     xfsforensics += "\n";
         //std::cout << "reverse mapping b+tree rooted in the fork." << std::endl;
@@ -467,6 +467,13 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     changetime = __builtin_bswap32(changetime);
     //xfsforensics += "Change Date|" + ConvertXfsTimeToHuman(changetime) + "\n";
     xfsforensics += "Change Date|" + ConvertUnixTimeToHuman(changetime) + "\n";
+    // CREATE TIME
+    if(inodeversion == 0x03)
+    {
+	uint8_t* bt = new uint8_t[4];
+	uint32_t createtime = 0;
+	//ReadContent(rawcontent, bt, inodeoffset + 
+    }
     // GET FILE CONTENT
     uint64_t inodedataoffset = inodeoffset;
     if(inodeversion == 0x03)
@@ -474,26 +481,37 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     else
         inodedataoffset += 100;
     std::cout << "inode data offset: " << inodedataoffset << std::endl;
-    if(inodeformat & 0x02)
+    if(inodeformat == 0x02)
     {
+	// NUMBER OF EXTENTS
+	uint8_t* ne = new uint8_t[4];
+	uint32_t numberextents = 0;
+	ReadContent(rawcontent, ne, inodeoffset + 76, 4);
+	ReturnUint32(&numberextents, ne);
+	delete[] ne;
+	numberextents = __builtin_bswap32(numberextents);
+	std::cout << "Number of Extents: " << numberextents << std::endl;
 	// NEED TO GET di_nextents to determine how many extents to loop over...
-	uint8_t* fh = new uint8_t[8];
-	uint64_t firsthalf = 0;
-	ReadContent(rawcontent, fh, inodedataoffset, 8);
-	ReturnUint64(&firsthalf, fh);
-	delete[] fh;
-	firsthalf = __builtin_bswap64(firsthalf);
-	uint8_t* sh = new uint8_t[8];
-	uint64_t secondhalf = 0;
-	ReadContent(rawcontent, sh, inodedataoffset + 8, 8);
-	ReturnUint64(&secondhalf, sh);
-	delete[] sh;
-	secondhalf = __builtin_bswap64(secondhalf);
-	uint64_t state = (firsthalf >> 63);
-	uint64_t startingoffset = (firsthalf & MASK(63)) >> 9;
-	uint64_t startingblock = ((firsthalf & MASK(9)) << 43) | (secondhalf >> 21);
-	uint64_t blockcount = (secondhalf & MASK(21));
-	std::cout << "Starting Offset: " << startingoffset << " starting block: " << startingblock << " block count: " << blockcount << " state: " << state << std::endl;
+	for(uint32_t i=0; i < numberextents; i++)
+	{
+	    uint8_t* fh = new uint8_t[8];
+	    uint64_t firsthalf = 0;
+	    ReadContent(rawcontent, fh, inodedataoffset + i*16, 8);
+	    ReturnUint64(&firsthalf, fh);
+	    delete[] fh;
+	    firsthalf = __builtin_bswap64(firsthalf);
+	    uint8_t* sh = new uint8_t[8];
+	    uint64_t secondhalf = 0;
+	    ReadContent(rawcontent, sh, inodedataoffset + i*16 + 8, 8);
+	    ReturnUint64(&secondhalf, sh);
+	    delete[] sh;
+	    secondhalf = __builtin_bswap64(secondhalf);
+	    uint64_t state = (firsthalf >> 63);
+	    uint64_t startingoffset = (firsthalf & MASK(63)) >> 9;
+	    uint64_t startingblock = ((firsthalf & MASK(9)) << 43) | (secondhalf >> 21);
+	    uint64_t blockcount = (secondhalf & MASK(21));
+	    std::cout << "Starting Offset: " << startingoffset << " starting block: " << startingblock << " block count: " << blockcount << " state: " << state << std::endl;
+	}
 
         // content offset is 49152 bytes = block 12 = 49152 / 4096 -> 0x0180 = b0000000110000000
     }
@@ -574,6 +592,7 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
         std::cout << "Directory" << std::endl;
     */
     uint16_t curoffset = 0;
+    // MAYBE THIS SHOULD BE == 0x01 and ELSE IF == 0x02, etc
     if(inodeformat & 0x01) // SHORT FORM DIRECTORY (local xfs_dir2_sf)
     {
         // ENTRY COUNT
