@@ -499,6 +499,28 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
         std::cout << "ag number: " << agnumber << std::endl;
         std::cout << "ag blocksize: " << cursb->blocksize << std::endl;
         std::cout << "ag blocks: " << cursb->allocationgroupblocks << std::endl;
+	// NEED TO GET di_nextents to determine how many extents to loop over...
+	/* HAIKU WAY
+	void Extent::FillMapEntry(void* pointerToMap)
+	{
+	    uint64 firstHalf = *((uint64*)pointerToMap);
+	    uint64 secondHalf = *((uint64*)pointerToMap + 1);
+		    //dividing the 128 bits into 2 parts.
+	    firstHalf = B_BENDIAN_TO_HOST_INT64(firstHalf);
+	    secondHalf = B_BENDIAN_TO_HOST_INT64(secondHalf);
+	    fMap->br_state = (firstHalf >> 63);
+	    fMap->br_startoff = (firstHalf & MASK(63)) >> 9;
+	    fMap->br_startblock = ((firstHalf & MASK(9)) << 43) | (secondHalf >> 21);
+	    fMap->br_blockcount = (secondHalf & MASK(21));
+	    TRACE("Extent::Init: startoff:(%" B_PRIu64 "), startblock:(%" B_PRIu64 "),"
+		    "blockcount:(%" B_PRIu64 "),state:(%" B_PRIu8 ")\n", fMap->br_startoff, fMap->br_startblock,
+		    fMap->br_blockcount, fMap->br_state);
+	}
+	 */ 
+	
+
+
+
         // content offset is 49152 bytes = block 12 = 49152 / 4096 -> 0x0180 = b0000000110000000
         /*
         std::cout << "allocationgroupblocklog: " << (int)cursb->allocationgroupblocklog << std::endl;
