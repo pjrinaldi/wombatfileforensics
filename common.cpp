@@ -1,5 +1,15 @@
 #include "common.h"
 
+std::string ConvertUnixTimeToHuman(uint32_t unixtime)
+{
+    time_t timet = (time_t)unixtime;
+    struct tm* tmtime = gmtime(&timet);
+    char hchar[100];
+    strftime(hchar, 100, "%m/%d/%Y %I:%M:%S %p UTC", tmtime);
+    
+    return std::string(hchar);
+}
+
 void ReadContent(std::ifstream* rawcontent, uint8_t* tmpbuf, uint64_t offset, uint64_t size)
 {
     rawcontent->seekg(offset);

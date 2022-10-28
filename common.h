@@ -9,6 +9,8 @@
 #include <cmath>
 #include <bitset>
 
+std::string ConvertUnixTimeToHuman(uint32_t unixtime);
+
 void ReadContent(std::ifstream* rawcontent, uint8_t* tmpbuf, uint64_t offset, uint64_t size);
 void ReadContent(std::ifstream* rawcontent, int8_t* tmpbuf, uint64_t offset, uint64_t size);
 void ReturnUint32(uint32_t* tmp32, uint8_t* tmp8);

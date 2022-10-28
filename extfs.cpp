@@ -1,15 +1,5 @@
 #include "extfs.h"
 
-std::string ConvertUnixTimeToHuman(uint32_t unixtime)
-{
-    time_t timet = (time_t)unixtime;
-    struct tm* tmtime = gmtime(&timet);
-    char hchar[100];
-    strftime(hchar, 100, "%m/%d/%Y %I:%M:%S %p UTC", tmtime);
-    
-    return std::string(hchar);
-}
-
 void GetContentBlocks(std::ifstream* devicebuffer, uint32_t blocksize, uint64_t curoffset, uint32_t incompatflags, std::vector<uint32_t>* blocklist)
 {
     uint8_t* iflags = new uint8_t[4];

@@ -15,7 +15,6 @@ struct sbinfo
     uint32_t blockgroupcount;
 };
 
-std::string ConvertUnixTimeToHuman(uint32_t unixtime);
 std::string ConvertBlocksToExtents(std::vector<uint32_t>* blocklist, uint32_t blocksize);
 
 void GetContentBlocks(std::ifstream* devicebuffer, uint32_t blocksize, uint64_t curoffset, uint32_t incompatflags, std::vector<uint32_t>* blocklist);

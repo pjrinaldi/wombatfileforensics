@@ -1,15 +1,5 @@
 #include "xfs.h"
 
-std::string ConvertXfsTimeToHuman(uint32_t unixtime)
-{
-    time_t timet = (time_t)unixtime;
-    struct tm* tmtime = gmtime(&timet);
-    char hchar[100];
-    strftime(hchar, 100, "%m/%d/%Y %I:%M:%S %p UTC", tmtime);
-    
-    return std::string(hchar);
-}
-
 /*
 void GetContentBlocks(std::ifstream* devicebuffer, uint32_t blocksize, uint64_t curoffset, uint32_t incompatflags, std::vector<uint32_t>* blocklist)
 {
@@ -457,7 +447,8 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     ReturnUint32(&accesstime, at);
     delete[] at;
     accesstime = __builtin_bswap32(accesstime);
-    xfsforensics += "Access Date|" + ConvertXfsTimeToHuman(accesstime) + "\n";
+    xfsforensics += "Access Date|" + ConvertUnixTimeToHuman(accesstime) + "\n";
+    //xfsforensics += "Access Date|" + ConvertXfsTimeToHuman(accesstime) + "\n";
     // MODIFY TIME
     uint8_t* mt = new uint8_t[4];
     uint32_t modifytime = 0;
@@ -465,7 +456,8 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     ReturnUint32(&modifytime, mt);
     delete[] mt;
     modifytime = __builtin_bswap32(modifytime);
-    xfsforensics += "Modify Date|" + ConvertXfsTimeToHuman(modifytime) + "\n";
+    //xfsforensics += "Modify Date|" + ConvertXfsTimeToHuman(modifytime) + "\n";
+    xfsforensics += "Modify Date|" + ConvertUnixTimeToHuman(modifytime) + "\n";
     // CHANGE TIME
     uint8_t* ct = new uint8_t[4];
     uint32_t changetime = 0;
@@ -473,7 +465,8 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     ReturnUint32(&changetime, ct);
     delete[] ct;
     changetime = __builtin_bswap32(changetime);
-    xfsforensics += "Change Date|" + ConvertXfsTimeToHuman(changetime) + "\n";
+    //xfsforensics += "Change Date|" + ConvertXfsTimeToHuman(changetime) + "\n";
+    xfsforensics += "Change Date|" + ConvertUnixTimeToHuman(changetime) + "\n";
     // GET FILE CONTENT
     uint64_t inodedataoffset = inodeoffset;
     if(inodeversion == 0x03)
