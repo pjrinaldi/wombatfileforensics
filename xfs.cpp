@@ -483,75 +483,26 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     std::cout << "inode data offset: " << inodedataoffset << std::endl;
     if(inodeformat & 0x02)
     {
-        uint8_t* fo = new uint8_t[8];
-        uint64_t logicalblockoffset = 0;
-        ReadContent(rawcontent, fo, inodedataoffset, 8);
-        ReturnUint64(&logicalblockoffset, fo);
-        delete[] fo;
-        logicalblockoffset = __builtin_bswap64(logicalblockoffset);
-        uint8_t* agni = new uint8_t[4];
-        uint32_t agnumber = 0;
-        ReadContent(rawcontent, agni, inodedataoffset + 8, 4);
-        ReturnUint32(&agnumber, agni);
-        delete[] agni;
-        agnumber = __builtin_bswap32(agnumber);
-        std::cout << "logical blockoffset: " << logicalblockoffset << std::endl;
-        std::cout << "ag number: " << agnumber << std::endl;
-        std::cout << "ag blocksize: " << cursb->blocksize << std::endl;
-        std::cout << "ag blocks: " << cursb->allocationgroupblocks << std::endl;
 	// NEED TO GET di_nextents to determine how many extents to loop over...
-	/* HAIKU WAY
-	void Extent::FillMapEntry(void* pointerToMap)
-	{
-	    uint64 firstHalf = *((uint64*)pointerToMap);
-	    uint64 secondHalf = *((uint64*)pointerToMap + 1);
-		    //dividing the 128 bits into 2 parts.
-	    firstHalf = B_BENDIAN_TO_HOST_INT64(firstHalf);
-	    secondHalf = B_BENDIAN_TO_HOST_INT64(secondHalf);
-	    fMap->br_state = (firstHalf >> 63);
-	    fMap->br_startoff = (firstHalf & MASK(63)) >> 9;
-	    fMap->br_startblock = ((firstHalf & MASK(9)) << 43) | (secondHalf >> 21);
-	    fMap->br_blockcount = (secondHalf & MASK(21));
-	    TRACE("Extent::Init: startoff:(%" B_PRIu64 "), startblock:(%" B_PRIu64 "),"
-		    "blockcount:(%" B_PRIu64 "),state:(%" B_PRIu8 ")\n", fMap->br_startoff, fMap->br_startblock,
-		    fMap->br_blockcount, fMap->br_state);
-	}
-	 */ 
-	
-
-
+	uint8_t* fh = new uint8_t[8];
+	uint64_t firsthalf = 0;
+	ReadContent(rawcontent, fh, inodedataoffset, 8);
+	ReturnUint64(&firsthalf, fh);
+	delete[] fh;
+	firsthalf = __builtin_bswap64(firsthalf);
+	uint8_t* sh = new uint8_t[8];
+	uint64_t secondhalf = 0;
+	ReadContent(rawcontent, sh, inodedataoffset + 8, 8);
+	ReturnUint64(&secondhalf, sh);
+	delete[] sh;
+	secondhalf = __builtin_bswap64(secondhalf);
+	uint64_t state = (firsthalf >> 63);
+	uint64_t startingoffset = (firsthalf & MASK(63)) >> 9;
+	uint64_t startingblock = ((firsthalf & MASK(9)) << 43) | (secondhalf >> 21);
+	uint64_t blockcount = (secondhalf & MASK(21));
+	std::cout << "Starting Offset: " << startingoffset << " starting block: " << startingblock << " block count: " << blockcount << " state: " << state << std::endl;
 
         // content offset is 49152 bytes = block 12 = 49152 / 4096 -> 0x0180 = b0000000110000000
-        /*
-        std::cout << "allocationgroupblocklog: " << (int)cursb->allocationgroupblocklog << std::endl;
-        std::cout << "inodeperblocklog " << (int)cursb->inodeperblocklog << std::endl;
-        uint8_t bitcount = cursb->allocationgroupblocklog + cursb->inodeperblocklog;
-        std::cout << "bit count: " << (int)bitcount << std::endl;
-        uint8_t bytelength = bitcount / 8;
-        std::cout << "byte length: " << (int)bytelength << std::endl;
-        uint8_t* ain = new uint8_t[bytelength];
-        std::vector<std::bitset> bytevector;
-        for(int i=0; i < bytelength; i++)
-            bytevector.push_back(std::bitset<8> tmpbits(ain[i]));
-        std::bitset absoluteinodenumber
-        //uint64_t absoluteinodenumber = 0;
-        ReadContent(rawcontent, ain, inodedataoffset + 12, bytelength);
-        //ReturnUint(&absoluteinodenumber, ain, bytelength);
-        delete[] ain;
-        //absoluteinodenumber = __builtin_bswap64(absoluteinodenumber);
-        */
-        //std::cout << std::hex << "AIN: " << absoluteinodenumber << std::dec << std::endl;
-        /*
-            std::bitset<8> runbits{runinfo};
-            //std::cout << "run bits: " << runbits << std::endl;
-            std::bitset<4> runlengthbits;
-            std::bitset<4> runoffsetbits;
-            for(int j=0; j < 4; j++)
-            {
-                runlengthbits.set(j, runbits[j]);
-                runoffsetbits.set(j, runbits[j+4]);
-            }
-        */
     }
 
     return xfsforensics;

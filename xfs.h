@@ -13,6 +13,8 @@ struct xfssuperblockinfo
     uint8_t inodeperblocklog; // 123
 };
 
+#define MASK(n)	((1UL << n) - 1)
+
 std::string ConvertXfsTimeToHuman(uint32_t unixtime);
 /*
 std::string ConvertBlocksToExtents(std::vector<uint32_t>* blocklist, uint32_t blocksize);
