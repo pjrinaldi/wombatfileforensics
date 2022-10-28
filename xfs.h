@@ -9,6 +9,8 @@ struct xfssuperblockinfo
     uint32_t allocationgroupcount;
     uint64_t rootinode;
     uint8_t directoryblocklog;
+    uint8_t allocationgroupblocklog; // 124
+    uint8_t inodeperblocklog; // 123
 };
 
 std::string ConvertXfsTimeToHuman(uint32_t unixtime);

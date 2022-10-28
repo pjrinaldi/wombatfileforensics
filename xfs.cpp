@@ -295,17 +295,32 @@ void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb)
     delete[] dbl;
     cursb->directoryblocklog = directoryblocklog;
     //std::cout << "Directory Block Log: " << (int)directoryblocklog << std::endl;
+    // ALLOCATION GROUP SIZE IN BLOCKS LOG
+    uint8_t* agbl = new uint8_t[1];
+    uint8_t allocationgroupblocklog = 0;
+    ReadContent(rawcontent, agbl, 124, 1);
+    allocationgroupblocklog = (uint8_t)agbl[0];
+    delete[] agbl;
+    cursb->allocationgroupblocklog = allocationgroupblocklog;
+    //uint8_t inodeperblocklog; // 123
+    // INODES PER BLOCK LOG
+    uint8_t* ipbl = new uint8_t[1];
+    uint8_t inodeperblocklog = 0;
+    ReadContent(rawcontent, ipbl, 123, 1);
+    inodeperblocklog = (uint8_t)ipbl[0];
+    delete[] ipbl;
+    cursb->inodeperblocklog = inodeperblocklog;
 }
 
 std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint64_t curinode, std::string filename)
 {
     std::string xfsforensics = "";
-    xfsforensics += "Ext Inode|" + std::to_string(curinode) + "\n";
+    xfsforensics += "XFS Inode|" + std::to_string(curinode) + "\n";
     xfsforensics += "Name|" + filename + "\n";
     //std::cout << "curinode to parse: " << curinode << " to find the file match: " << filename << std::endl;
     // INODE OFFSET
     uint64_t inodeoffset = (uint64_t)((float)((float)curinode / (float)cursb->inodesperblock) * cursb->blocksize);
-    //std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
+    std::cout << "Current Inode Offset: " << inodeoffset << std::endl;
     // INODE MODE
     uint8_t* im = new uint8_t[2];
     uint16_t inodemode = 0;
@@ -326,13 +341,9 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     if(inodemode & 0x1000) // FIFO (pipe)
         filemodestring.replace(0, 1, "p");
     if(inodemode & 0x8000) // regular file
-    {
         filemodestring.replace(0, 1, "-");
-    }
     else if(inodemode & 0x4000) // directory
-    {
         filemodestring.replace(0, 1, "d");
-    }
     if(inodemode & 0x100) // user read
         filemodestring.replace(1, 1, "r");
     if(inodemode & 0x080) // user write
@@ -352,7 +363,6 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     if(inodemode & 0x001) // other execute
         filemodestring.replace(9, 1, "x");
     xfsforensics += "Mode|" + filemodestring + "\n";
-
     // INODE VERSION
     int8_t* iv = new int8_t[1];
     int8_t inodeversion = 0;
@@ -367,18 +377,79 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     ReadContent(rawcontent, ifmt, inodeoffset + 5, 1);
     inodeformat = (int8_t)ifmt[0];
     delete[] ifmt;
+    xfsforensics += "Data Fork Type|";
+    /*
     if(inodeformat & 0x01)
-        std::cout << "local" << std::endl;
+        xfsforensics += "local,";
+        //std::cout << "local" << std::endl;
+    */
     if(inodeformat & 0x02)
-        std::cout << "extents" << std::endl;
+        xfsforensics += "extents,";
+        //std::cout << "extents" << std::endl;
     if(inodeformat & 0x03)
-        std::cout << "btree" << std::endl;
+        xfsforensics += "b+tree,";
+        //std::cout << "btree" << std::endl;
     if(inodeformat & 0x05)
-        std::cout << "reverse mapping b+tree rooted in the fork." << std::endl;
-    if(inodemode & 0x4000)
-        std::cout << "Directory" << std::endl;
-    std::cout << "Inode Format: " << (int)inodeformat << std::endl;
-
+        xfsforensics += "reverse mapped b+tree,";
+    xfsforensics += "\n";
+        //std::cout << "reverse mapping b+tree rooted in the fork." << std::endl;
+    //std::cout << "Inode Format: " << (int)inodeformat << std::endl;
+    // USER ID
+    uint8_t* ui = new uint8_t[4];
+    uint32_t uid = 0;
+    ReadContent(rawcontent, ui, inodeoffset + 8, 4);
+    ReturnUint32(&uid, ui);
+    delete[] ui;
+    uid = __builtin_bswap32(uid);
+    // GROUP ID
+    uint8_t* gi = new uint8_t[4];
+    uint32_t gid = 0;
+    ReadContent(rawcontent, gi, inodeoffset + 12, 4);
+    ReturnUint32(&gid, gi);
+    delete[] gi;
+    gid = __builtin_bswap32(gid);
+    xfsforensics += "uid/gid|" + std::to_string(uid) + "/" + std::to_string(gid) + "\n";
+    // LINK COUNT
+    xfsforensics += "Link Count|";
+    if(inodeversion == 0x01) // use di_onlink
+    {
+        uint8_t* ol = new uint8_t[2];
+        uint16_t onlink = 0;
+        ReadContent(rawcontent, ol, inodeoffset + 6, 2);
+        ReturnUint16(&onlink, ol);
+        delete[] ol;
+        onlink = __builtin_bswap16(onlink);
+        xfsforensics += std::to_string(onlink);
+    }
+    else if(inodeversion == 0x02) // use di_nlink
+    {
+        uint8_t* nl = new uint8_t[4];
+        uint32_t nlink = 0;
+        ReadContent(rawcontent, nl, inodeoffset + 16, 4);
+        ReturnUint32(&nlink, nl);
+        delete[] nl;
+        nlink = __builtin_bswap32(nlink);
+        xfsforensics += std::to_string(nlink);
+    }
+    else if(inodeversion == 0x03) // use di_projid
+    {
+        uint8_t* pid = new uint8_t[4];
+        uint32_t projid = 0;
+        ReadContent(rawcontent, pid, inodeoffset + 20, 4);
+        ReturnUint32(&projid, pid);
+        delete[] pid;
+        projid = __builtin_bswap32(projid);
+        xfsforensics += std::to_string(projid);
+    }
+    xfsforensics += "\n";
+    // LOGICAL SIZE
+    uint8_t* ls = new uint8_t[8];
+    uint64_t logicalsize = 0;
+    ReadContent(rawcontent, ls, inodeoffset + 56, 8);
+    ReturnUint64(&logicalsize, ls);
+    delete[] ls;
+    logicalsize = __builtin_bswap64(logicalsize);
+    xfsforensics += "Logical Size|" + std::to_string(logicalsize) + "\n";
     // ACCESS TIME
     uint8_t* at = new uint8_t[4];
     uint32_t accesstime = 0;
@@ -403,6 +474,63 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
     delete[] ct;
     changetime = __builtin_bswap32(changetime);
     xfsforensics += "Change Date|" + ConvertXfsTimeToHuman(changetime) + "\n";
+    // GET FILE CONTENT
+    uint64_t inodedataoffset = inodeoffset;
+    if(inodeversion == 0x03)
+        inodedataoffset += 176;
+    else
+        inodedataoffset += 100;
+    std::cout << "inode data offset: " << inodedataoffset << std::endl;
+    if(inodeformat & 0x02)
+    {
+        uint8_t* fo = new uint8_t[8];
+        uint64_t logicalblockoffset = 0;
+        ReadContent(rawcontent, fo, inodedataoffset, 8);
+        ReturnUint64(&logicalblockoffset, fo);
+        delete[] fo;
+        logicalblockoffset = __builtin_bswap64(logicalblockoffset);
+        uint8_t* agni = new uint8_t[4];
+        uint32_t agnumber = 0;
+        ReadContent(rawcontent, agni, inodedataoffset + 8, 4);
+        ReturnUint32(&agnumber, agni);
+        delete[] agni;
+        agnumber = __builtin_bswap32(agnumber);
+        std::cout << "logical blockoffset: " << logicalblockoffset << std::endl;
+        std::cout << "ag number: " << agnumber << std::endl;
+        std::cout << "ag blocksize: " << cursb->blocksize << std::endl;
+        std::cout << "ag blocks: " << cursb->allocationgroupblocks << std::endl;
+        // content offset is 49152 bytes = block 12 = 49152 / 4096 -> 0x0180 = b0000000110000000
+        /*
+        std::cout << "allocationgroupblocklog: " << (int)cursb->allocationgroupblocklog << std::endl;
+        std::cout << "inodeperblocklog " << (int)cursb->inodeperblocklog << std::endl;
+        uint8_t bitcount = cursb->allocationgroupblocklog + cursb->inodeperblocklog;
+        std::cout << "bit count: " << (int)bitcount << std::endl;
+        uint8_t bytelength = bitcount / 8;
+        std::cout << "byte length: " << (int)bytelength << std::endl;
+        uint8_t* ain = new uint8_t[bytelength];
+        std::vector<std::bitset> bytevector;
+        for(int i=0; i < bytelength; i++)
+            bytevector.push_back(std::bitset<8> tmpbits(ain[i]));
+        std::bitset absoluteinodenumber
+        //uint64_t absoluteinodenumber = 0;
+        ReadContent(rawcontent, ain, inodedataoffset + 12, bytelength);
+        //ReturnUint(&absoluteinodenumber, ain, bytelength);
+        delete[] ain;
+        //absoluteinodenumber = __builtin_bswap64(absoluteinodenumber);
+        */
+        //std::cout << std::hex << "AIN: " << absoluteinodenumber << std::dec << std::endl;
+        /*
+            std::bitset<8> runbits{runinfo};
+            //std::cout << "run bits: " << runbits << std::endl;
+            std::bitset<4> runlengthbits;
+            std::bitset<4> runoffsetbits;
+            for(int j=0; j < 4; j++)
+            {
+                runlengthbits.set(j, runbits[j]);
+                runoffsetbits.set(j, runbits[j+4]);
+            }
+        */
+    }
 
     return xfsforensics;
 }
@@ -452,7 +580,7 @@ uint64_t ParseXfsPath(std::ifstream* rawcontent, xfssuperblockinfo* cursb, uint6
     inodedatablockcount = __builtin_bswap64(inodedatablockcount);
     //std::cout << "inode data block count: " << inodedatablockcount << std::endl;
     uint64_t inodedataoffset = inodeoffset;
-    if(inodeversion == 3)
+    if(inodeversion == 0x03)
         inodedataoffset += 176;
     else
         inodedataoffset += 100;
