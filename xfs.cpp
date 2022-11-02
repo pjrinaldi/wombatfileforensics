@@ -480,8 +480,8 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
         inodedataoffset += 176;
     else
         inodedataoffset += 100;
-    std::cout << "inode data offset: " << inodedataoffset << std::endl;
-    if(inodeformat == 0x02)
+    //std::cout << "inode data offset: " << inodedataoffset << std::endl;
+    if(inodeformat == 0x02) // EXTENTS
     {
 	// NUMBER OF EXTENTS
 	uint8_t* ne = new uint8_t[4];
@@ -490,8 +490,9 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
 	ReturnUint32(&numberextents, ne);
 	delete[] ne;
 	numberextents = __builtin_bswap32(numberextents);
-	std::cout << "Number of Extents: " << numberextents << std::endl;
+	//std::cout << "Number of Extents: " << numberextents << std::endl;
 	// NEED TO GET di_nextents to determine how many extents to loop over...
+        xfsforensics += "Layout|";
 	for(uint32_t i=0; i < numberextents; i++)
 	{
 	    uint8_t* fh = new uint8_t[8];
@@ -510,10 +511,10 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
 	    uint64_t startingoffset = (firsthalf & MASK(63)) >> 9;
 	    uint64_t startingblock = ((firsthalf & MASK(9)) << 43) | (secondhalf >> 21);
 	    uint64_t blockcount = (secondhalf & MASK(21));
-	    std::cout << "Starting Offset: " << startingoffset << " starting block: " << startingblock << " block count: " << blockcount << " state: " << state << std::endl;
+            xfsforensics += std::to_string(startingoffset + startingblock * cursb->blocksize) + "," + std::to_string(blockcount * cursb->blocksize) + ";";
+	    //std::cout << "Starting Offset: " << startingoffset << " starting block: " << startingblock << " block count: " << blockcount << " state: " << state << std::endl;
 	}
-
-        // content offset is 49152 bytes = block 12 = 49152 / 4096 -> 0x0180 = b0000000110000000
+        xfsforensics += "\n";
     }
 
     return xfsforensics;
