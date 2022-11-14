@@ -14,4 +14,4 @@ sudo ldconfig
 
 echo "Building wombatfileforensics"
 
-g++ -O3 -o wombatfileforensics common.cpp xfs.cpp ntfs.cpp fatfs.cpp extfs.cpp wombatfileforensics.cpp -lpthread -L. -lblake3
+g++ -O3 -o wombatfileforensics common.cpp iso.cpp xfs.cpp ntfs.cpp fatfs.cpp extfs.cpp wombatfileforensics.cpp -lpthread -L. -lblake3

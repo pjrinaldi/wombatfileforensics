@@ -13,6 +13,7 @@
 #include "fatfs.h"
 #include "ntfs.h"
 #include "xfs.h"
+#include "iso.h"
 
 void ShowUsage(int outtype)
 {
@@ -1149,6 +1150,7 @@ int main(int argc, char* argv[])
                 break;
             case 14:
                 std::cout << "ISO9660\n";
+		ParseIsoForensics(filename, mntptstr, devicestr);
                 break;
             case 15:
                 std::cout << "UDF\n";
