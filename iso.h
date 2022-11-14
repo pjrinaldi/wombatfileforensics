@@ -5,10 +5,10 @@ struct isosuperblockinfo
     uint32_t blocksize;
     uint8_t pvcount;
     uint8_t svcount;
-    QList<uint32_t> pvrootdirblk;
-    QList<uint32_t> pvrootdirlen;
-    QList<uint32_t> svrootdirblk;
-    QList<uint32_t> svrootdirlen;
+    std::vector<uint32_t> pvrootdirblk;
+    std::vector<uint32_t> pvrootdirlen;
+    std::vector<uint32_t> svrootdirblk;
+    std::vector<uint32_t> svrootdirlen;
 };
 
 /*
@@ -22,4 +22,5 @@ std::string ParseXfsFile(std::ifstream* rawcontent, xfssuperblockinfo* cursb, ui
 void ParseSuperBlock(std::ifstream* rawcontent, xfssuperblockinfo* cursb);
 */
 
+void ParseSuperBlock(std::ifstream* rawcontent, isosuperblockinfo* cursb);
 void ParseIsoForensics(std::string filename, std::string mntptstr, std::string devicestr);

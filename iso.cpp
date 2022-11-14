@@ -1095,39 +1095,46 @@ std::string ParseExtFile(std::ifstream* rawcontent, sbinfo* cursb, uint64_t curi
 	out << "Supplementary/Enhanced Volume Count|" << QString::number(svdindx - 1) << "|Number of Supplemnentary/Enhanded volumes." << Qt::endl;
 
  */ 
+
+void ParseSuperBlock(std::ifstream* rawcontent, isosuperblockinfo* cursb)
+{
+
+}
 void ParseIsoForensics(std::string filename, std::string mntptstr, std::string devicestr)
 {
     std::ifstream devicebuffer(devicestr.c_str(), std::ios::in|std::ios::binary);
     std::cout << std::endl << "Forensics Artifacts for Mounted File: " << filename << std::endl;
     std::cout << "Mounted File Mount Point: " << mntptstr << std::endl;
     std::cout << "Mounted File Device: " << devicestr << std::endl;
-    
+
+    isosuperblockinfo isosb;
+    ParseSuperBlock(&devicebuffer, &isosb);
+    // NEED TO DETERMINE STARTING DIRECTORY BASED ON MOUNT POINT AND FILENAME
+    std::string pathstring = "";
+    if(mntptstr.compare("/") != 0)
+    {
+	std::size_t initdir = filename.find(mntptstr);
+	pathstring = filename.substr(initdir + mntptstr.size());
+    }
+    else
+	pathstring = filename;
+    std::cout << "mounted File Internal Path: " << pathstring << std::endl;
+    // SPLIT CURRENT FILE PATH INTO DIRECTORIES
+    std::vector<std::string> pathvector;
+    std::istringstream iss(pathstring);
+    std::string s;
+    while(getline(iss, s, '/'))
+	pathvector.push_back(s);
+
+    uint64_t childinode = 0;
+    std::cout << "path vector size: " << pathvector.size() << std::endl;
+
     devicebuffer.close();
 }
 /*
 void ParseXfsForensics(std::string filename, std::string mntptstr, std::string devicestr)
 {
     //std::cout << filename << " || " << mntptstr << " || " << devicestr << std::endl;
-    xfssuperblockinfo cursb;
-    ParseSuperBlock(&devicebuffer, &cursb);
-    // NEED TO DETERMINE STARINT DIRECTORY BASED ON MOUNT POINT AND FILENAME
-    std::string pathstring = "";
-    if(mntptstr.compare("/") != 0)
-    {
-        std::size_t initdir = filename.find(mntptstr);
-        pathstring = filename.substr(initdir + mntptstr.size());
-        //std::cout << "initdir: " << initdir << " new path: " << pathstring << std::endl;
-    }
-    else
-        pathstring = filename;
-    std::cout << "Mounted File Internal Path: " << pathstring << std::endl;
-    // SPLIT CURRENT FILE PATH INTO DIRECTORIES
-    std::vector<std::string> pathvector;
-    std::istringstream iss(pathstring);
-    std::string s;
-    while(getline(iss, s, '/'))
-        pathvector.push_back(s);
-
     uint64_t childinode = 0;
     //std::cout << "path vector size: " << pathvector.size() << std::endl;
     childinode = ParseXfsPath(&devicebuffer, &cursb, cursb.rootinode, pathvector.at(1));
@@ -1144,7 +1151,5 @@ void ParseXfsForensics(std::string filename, std::string mntptstr, std::string d
     //std::cout << "now to parse xfs file: " << pathvector.at(pathvector.size() - 1) << std::endl;
     std::string xfsforensics = ParseXfsFile(&devicebuffer, &cursb, childinode, pathvector.at(pathvector.size() - 1));
     std::cout << xfsforensics;
-    
-    devicebuffer.close();
 }
 */
